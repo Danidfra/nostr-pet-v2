@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Blobbi } from '@/types/blobbi';
 import { EggGraphic } from '@/components/blobbi/EggGraphic';
 import { BabyGraphic } from '@/components/blobbi/BabyGraphic';
 import { AdultGraphic } from '@/components/blobbi/AdultGraphic';
-import { 
-  Heart, 
-  Utensils, 
+import { StatusCircle } from '@/components/blobbi/StatusCircle';
+import {
+  Heart,
+  Utensils,
   Sparkles,
   Zap,
   ChevronLeft,
@@ -23,26 +23,26 @@ import {
   Lightbulb,
   Smile,
   Dices,
+  Droplet,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
-import { cn } from '@/lib/utils';
 
 interface HomeScreenProps {
   blobbis: Blobbi[];
   userName: string;
-  onLogout: () => void;
+  onLogout?: () => void;
 }
 
 type Room = 'MY_BLOBBI' | 'GROWTH_HUB' | 'PLAYROOM';
 
 const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLogout }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => {
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
   const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
   const [eggTemperature, setEggTemperature] = useState(65);
   const { toast } = useToast();
-  
+
   const currentBlobbi = blobbis[currentBlobbiIndex];
   const isEgg = currentBlobbi.lifeStage === 'egg';
   const hasMultipleBlobbis = blobbis.length > 1;
@@ -121,17 +121,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
       {/* HEADER */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-purple-100 sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-          <div>
+      <header className="flex-none bg-white/80 backdrop-blur-sm border-b border-purple-100">
+        <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          {/* Left: App name and user */}
+          <div className="flex-shrink-0">
             <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
               Blobbi
             </h1>
             <p className="text-xs text-muted-foreground">{userName}</p>
           </div>
-          <div className="flex gap-2">
+
+          {/* Center: Status circles */}
+          <div className="flex items-center gap-2 flex-wrap justify-center">
+            <StatusCircle
+              icon={Heart}
+              value={currentBlobbi.stats.health}
+              label="Health"
+            />
+            <StatusCircle
+              icon={Utensils}
+              value={currentBlobbi.stats.hunger}
+              label="Hunger"
+            />
+            <StatusCircle
+              icon={Smile}
+              value={currentBlobbi.stats.happiness}
+              label="Happiness"
+            />
+            <StatusCircle
+              icon={Zap}
+              value={currentBlobbi.stats.energy}
+              label="Energy"
+            />
+            <StatusCircle
+              icon={Droplet}
+              value={currentBlobbi.stats.hygiene}
+              label="Hygiene"
+            />
+          </div>
+
+          {/* Right: Settings and Shop */}
+          <div className="flex gap-2 flex-shrink-0">
             <Button variant="ghost" size="icon" onClick={() => handleAction('Settings')}>
               <Settings className="h-5 w-5" />
             </Button>
@@ -142,13 +174,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         </div>
       </header>
 
-      {/* MAIN AREA - Blobbi in center */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4 relative">
-        {/* Room background card */}
-        <Card className="w-full max-w-md shadow-2xl border-2 border-purple-100 overflow-hidden">
-          <CardContent className="p-6">
-            {/* Blobbi info badges */}
-            <div className="flex justify-center gap-2 mb-4">
+      {/* MAIN AREA - Blobbi centered directly */}
+      <main className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
+        <div className="flex flex-col items-center justify-center max-h-full w-full max-w-md">
+          {/* Blobbi name and info */}
+          <div className="mb-4 text-center">
+            <h2 className="text-3xl font-bold mb-2">{currentBlobbi.name}</h2>
+            <div className="flex justify-center gap-2 mb-2">
               <Badge variant="secondary" className="capitalize">
                 {currentBlobbi.lifeStage}
               </Badge>
@@ -159,12 +191,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
               )}
             </div>
 
-            {/* Blobbi name */}
-            <h2 className="text-2xl font-bold text-center mb-2">{currentBlobbi.name}</h2>
-
             {/* Multiple Blobbis selector */}
             {hasMultipleBlobbis && currentRoom === 'MY_BLOBBI' && (
-              <div className="flex items-center justify-center gap-3 mb-4">
+              <div className="flex items-center justify-center gap-3">
                 <Button
                   variant="outline"
                   size="icon"
@@ -186,130 +215,60 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
                 </Button>
               </div>
             )}
+          </div>
 
-            {/* ROOM CONTENT */}
-            <div className="min-h-[400px] flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-pink-50 rounded-lg p-6">
-              {isRoomLocked() ? (
-                // Locked room for eggs
-                <div className="text-center space-y-4">
-                  <div className="text-6xl mb-4">🔒</div>
-                  <h3 className="text-xl font-semibold">Room Locked</h3>
-                  <p className="text-muted-foreground">
-                    This room will unlock when your Blobbi hatches!
-                  </p>
-                  {renderBlobbiGraphic()}
-                </div>
-              ) : (
-                <>
-                  {/* Blobbi graphic - always centered */}
-                  <div className="mb-6">
-                    {renderBlobbiGraphic()}
-                  </div>
-
-                  {/* Room-specific content */}
-                  {currentRoom === 'MY_BLOBBI' && isEgg && (
-                    // Egg incubation panel
-                    <div className="w-full space-y-4">
-                      <Card className="bg-white/50">
-                        <CardContent className="p-4 space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Thermometer className="h-4 w-4 text-orange-500" />
-                              <span className="text-sm font-medium">Temperature</span>
-                            </div>
-                            <Badge variant={eggTemperature > 70 ? 'default' : 'secondary'}>
-                              {eggTemperature}°
-                            </Badge>
-                          </div>
-                          <div className="w-full bg-gradient-to-r from-blue-200 via-yellow-200 to-red-200 h-2 rounded-full overflow-hidden">
-                            <div 
-                              className="bg-orange-500 h-full transition-all duration-300"
-                              style={{ width: `${eggTemperature}%` }}
-                            />
-                          </div>
-                          <p className="text-xs text-muted-foreground text-center">
-                            Keep your egg warm and cared for to help it hatch!
-                          </p>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {currentRoom === 'GROWTH_HUB' && !isEgg && (
-                    // Growth Hub content
-                    <div className="w-full space-y-3">
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Target className="h-8 w-8 text-purple-500" />
-                          <div>
-                            <h4 className="font-semibold">Daily Habit</h4>
-                            <p className="text-xs text-muted-foreground">Build healthy routines</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <TrendingUp className="h-8 w-8 text-blue-500" />
-                          <div>
-                            <h4 className="font-semibold">Goals</h4>
-                            <p className="text-xs text-muted-foreground">Track your progress</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Lightbulb className="h-8 w-8 text-yellow-500" />
-                          <div>
-                            <h4 className="font-semibold">Mini Quests</h4>
-                            <p className="text-xs text-muted-foreground">Complete challenges</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-
-                  {currentRoom === 'PLAYROOM' && !isEgg && (
-                    // Playroom content
-                    <div className="w-full space-y-3">
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Play className="h-8 w-8 text-green-500" />
-                          <div>
-                            <h4 className="font-semibold">Mini Games</h4>
-                            <p className="text-xs text-muted-foreground">Play fun games together</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Dices className="h-8 w-8 text-pink-500" />
-                          <div>
-                            <h4 className="font-semibold">Throw a Ball</h4>
-                            <p className="text-xs text-muted-foreground">Interactive play time</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                      <Card className="bg-white/50 hover:bg-white/70 transition-colors cursor-pointer">
-                        <CardContent className="p-4 flex items-center gap-3">
-                          <Smile className="h-8 w-8 text-orange-500" />
-                          <div>
-                            <h4 className="font-semibold">Tell a Joke</h4>
-                            <p className="text-xs text-muted-foreground">Make your Blobbi laugh</p>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    </div>
-                  )}
-                </>
-              )}
+          {/* Blobbi graphic - main focus */}
+          {isRoomLocked() ? (
+            // Locked room for eggs
+            <div className="text-center space-y-4">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-xl font-semibold">Room Locked</h3>
+              <p className="text-muted-foreground">
+                This room will unlock when your Blobbi hatches!
+              </p>
+              <div className="mt-6">
+                {renderBlobbiGraphic()}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          ) : (
+            <>
+              <div className="mb-6 scale-150">
+                {renderBlobbiGraphic()}
+              </div>
+
+              {/* Optional small info panel below Blobbi */}
+              {currentRoom === 'MY_BLOBBI' && isEgg && (
+                <div className="w-full max-w-xs">
+                  <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 shadow-sm">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Thermometer className="h-4 w-4 text-orange-500" />
+                        <span className="text-sm font-medium">Temperature</span>
+                      </div>
+                      <Badge variant={eggTemperature > 70 ? 'default' : 'secondary'} className="text-xs">
+                        {eggTemperature}°
+                      </Badge>
+                    </div>
+                    <div className="w-full bg-gradient-to-r from-blue-200 via-yellow-200 to-red-200 h-2 rounded-full overflow-hidden">
+                      <div
+                        className="bg-orange-500 h-full transition-all duration-300"
+                        style={{ width: `${eggTemperature}%` }}
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground text-center mt-2">
+                      Keep warm to help it hatch!
+                    </p>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </main>
 
       {/* ROOM NAVIGATION BAR */}
-      <div className="bg-white/80 backdrop-blur-sm border-t border-purple-100">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between max-w-md">
+      <div className="flex-none bg-white/80 backdrop-blur-sm border-t border-purple-100">
+        <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <Button
             variant="ghost"
             size="icon"
@@ -331,8 +290,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       </div>
 
       {/* FOOTER - ACTIONS (changes based on room) */}
-      <footer className="bg-white border-t-2 border-purple-200 shadow-lg">
-        <div className="container mx-auto px-4 py-4 max-w-md">
+      <footer className="flex-none bg-white border-t-2 border-purple-200 shadow-lg">
+        <div className="w-full max-w-md mx-auto px-4 py-4">
           {currentRoom === 'MY_BLOBBI' && isEgg && (
             // Egg actions
             <div className="grid grid-cols-2 gap-3">
