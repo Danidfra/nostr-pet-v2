@@ -26,6 +26,8 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   Menu,
   Camera,
   Backpack,
@@ -60,6 +62,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
   const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+  const [isStatusOpen, setIsStatusOpen] = useState(true);
   const { toast } = useToast();
 
   const currentBlobbi = blobbis[currentBlobbiIndex];
@@ -374,39 +377,81 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         </div>
       </header>
 
-      {/* HEADER - Row 2: Status circles */}
-      <div className="flex-none bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700 py-2">
-        <div className="w-full max-w-4xl mx-auto px-4 flex items-center justify-center gap-2 flex-wrap">
-          <StatusCircle
-            icon={Heart}
-            value={currentBlobbi.stats.health}
-            label="Health"
-          />
-          <StatusCircle
-            icon={Utensils}
-            value={currentBlobbi.stats.hunger}
-            label="Hunger"
-          />
-          <StatusCircle
-            icon={Sparkles}
-            value={currentBlobbi.stats.happiness}
-            label="Happiness"
-          />
-          <StatusCircle
-            icon={Zap}
-            value={currentBlobbi.stats.energy}
-            label="Energy"
-          />
-          <StatusCircle
-            icon={Droplet}
-            value={currentBlobbi.stats.hygiene}
-            label="Hygiene"
-          />
+      {/* STATUS DRAWER - Collapsible status row */}
+      <div className="flex-none">
+        {isStatusOpen ? (
+          // Open state: full status row with handle
+          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
+            <div className="w-full max-w-4xl mx-auto px-4 py-2">
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <StatusCircle
+                  icon={Heart}
+                  value={currentBlobbi.stats.health}
+                  label="Health"
+                />
+                <StatusCircle
+                  icon={Utensils}
+                  value={currentBlobbi.stats.hunger}
+                  label="Hunger"
+                />
+                <StatusCircle
+                  icon={Sparkles}
+                  value={currentBlobbi.stats.happiness}
+                  label="Happiness"
+                />
+                <StatusCircle
+                  icon={Zap}
+                  value={currentBlobbi.stats.energy}
+                  label="Energy"
+                />
+                <StatusCircle
+                  icon={Droplet}
+                  value={currentBlobbi.stats.hygiene}
+                  label="Hygiene"
+                />
+              </div>
+              <div className="flex justify-center mt-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setIsStatusOpen(false)}
+                  className="h-6 px-3 rounded-full text-xs text-muted-foreground hover:bg-muted"
+                >
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Hide status
+                </Button>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Closed state: thin bar with handle
+          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
+            <div className="flex justify-center py-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsStatusOpen(true)}
+                className="h-6 px-3 rounded-full text-xs text-muted-foreground hover:bg-muted"
+              >
+                <ChevronDown className="h-3 w-3 mr-1" />
+                Show status
+              </Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ROOM TITLE ROW */}
+      <div className="flex-none">
+        <div className="w-full max-w-4xl mx-auto px-4 py-2">
+          <h2 className="text-lg font-semibold text-center text-slate-900 dark:text-slate-100">
+            {getRoomTitle()}
+          </h2>
         </div>
       </div>
 
       {/* MAIN AREA - ONLY Blobbi graphic centered */}
-      <main className="flex-1 flex items-center justify-center relative overflow-hidden">
+      <main className="flex-1 flex items-start justify-center relative overflow-hidden pt-4">
         {isRoomLocked() ? (
           // Locked room for eggs
           <div className="text-center space-y-4">
@@ -441,32 +486,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         )}
       </main>
 
-      {/* FOOTER - Row 1: Room navigation */}
-      <div className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-t border-purple-100 dark:border-slate-700">
+      {/* FOOTER - Per-room navigation with arrows */}
+      <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+          {/* Left Arrow */}
           <Button
             variant="ghost"
             size="icon"
             onClick={goToPreviousRoom}
-            className="rounded-full"
+            className="rounded-full h-12 w-12"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{getRoomTitle()}</h3>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={goToNextRoom}
-            className="rounded-full"
-          >
-            <ChevronRight className="h-5 w-5" />
-          </Button>
-        </div>
-      </div>
 
-      {/* FOOTER - Row 2: Per-room navigation */}
-      <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
-        <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-around">
+          {/* Per-room icon buttons */}
+          <div className="flex items-center justify-around flex-1 gap-2">
           {currentRoom === 'MY_BLOBBI' && (
             <>
               {/* Camera */}
@@ -596,6 +630,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
               </div>
             </>
           )}
+          </div>
+
+          {/* Right Arrow */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={goToNextRoom}
+            className="rounded-full h-12 w-12"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </Button>
         </div>
       </div>
 
