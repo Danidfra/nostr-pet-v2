@@ -1,6 +1,35 @@
 import { Blobbi } from '@/types/blobbi';
 
 export const mockBlobbis: Blobbi[] = [
+  
+  // Baby stage Blobbi
+  {
+    id: 'blobbi-baby-001',
+    ownerPubkey: 'mock-user-pubkey',
+    name: 'Bubbles',
+    birthTime: Date.now() - 1000 * 60 * 60 * 24 * 7, // 7 days ago
+    hatchTime: Date.now() - 1000 * 60 * 60 * 24 * 5, // 5 days ago
+    lastInteraction: Date.now() - 1000 * 60 * 15, // 15 minutes ago
+    lifeStage: 'baby',
+    state: 'active',
+    stats: {
+      health: 90,
+      hunger: 50,
+      happiness: 85,
+      energy: 70,
+      hygiene: 75,
+    },
+    experience: 250,
+    coins: 100,
+    generation: 1,
+    breedingReady: false,
+    careStreak: 5,
+    baseColor: '#ccffcc',
+    eyeColor: '#3182CE',
+    mood: 'playful',
+    isSleeping: false,
+  },
+
   // Egg stage Blobbi
   {
     id: 'blobbi-egg-001',
@@ -29,34 +58,6 @@ export const mockBlobbis: Blobbi[] = [
     eggStatus: 'warm',
     shellIntegrity: 100,
     incubationProgress: 45,
-  },
-  
-  // Baby stage Blobbi
-  {
-    id: 'blobbi-baby-001',
-    ownerPubkey: 'mock-user-pubkey',
-    name: 'Bubbles',
-    birthTime: Date.now() - 1000 * 60 * 60 * 24 * 7, // 7 days ago
-    hatchTime: Date.now() - 1000 * 60 * 60 * 24 * 5, // 5 days ago
-    lastInteraction: Date.now() - 1000 * 60 * 15, // 15 minutes ago
-    lifeStage: 'baby',
-    state: 'active',
-    stats: {
-      health: 90,
-      hunger: 50,
-      happiness: 85,
-      energy: 70,
-      hygiene: 75,
-    },
-    experience: 250,
-    coins: 100,
-    generation: 1,
-    breedingReady: false,
-    careStreak: 5,
-    baseColor: '#ccffcc',
-    eyeColor: '#3182CE',
-    mood: 'playful',
-    isSleeping: false,
   },
   
   // Adult stage Blobbi
