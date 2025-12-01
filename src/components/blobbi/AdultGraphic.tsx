@@ -2,75 +2,112 @@ import React from 'react';
 import { cn } from '@/lib/utils';
 import { Blobbi, BlobbiEvolutionForm } from '@/types/blobbi';
 
-// Import adult SVGs - we'll import them dynamically based on evolutionForm
+// Import baby SVGs for fallback
+import blobbiBaseSvg from '@/assets/baby-stage/baby/blobbi-baby-base.svg';
+import blobbiSleepingSvg from '@/assets/baby-stage/baby/blobbi-baby-sleeping.svg';
+
+// Import adult SVGs
+import bloomiBase from '@/assets/adult-stage/bloomi/bloomi-base.svg';
+import bloomiSleeping from '@/assets/adult-stage/bloomi/bloomi-sleeping.svg';
+import breezyBase from '@/assets/adult-stage/breezy/breezy-base.svg';
+import breezySleeping from '@/assets/adult-stage/breezy/breezy-sleeping.svg';
+import cactiBase from '@/assets/adult-stage/cacti/cacti-base.svg';
+import cactiSleeping from '@/assets/adult-stage/cacti/cacti-sleeping.svg';
+import cattiBase from '@/assets/adult-stage/catti/catti-base.svg';
+import cattiSleeping from '@/assets/adult-stage/catti/catti-sleeping.svg';
+import cloudiBase from '@/assets/adult-stage/cloudi/cloudi-base.svg';
+import cloudiSleeping from '@/assets/adult-stage/cloudi/cloudi-sleeping.svg';
+import crystiBase from '@/assets/adult-stage/crysti/crysti-base.svg';
+import crystiSleeping from '@/assets/adult-stage/crysti/crysti-sleeping.svg';
+import droppiBase from '@/assets/adult-stage/droppi/droppi-base.svg';
+import droppiSleeping from '@/assets/adult-stage/droppi/droppi-sleeping.svg';
+import flammiBase from '@/assets/adult-stage/flammi/flammi-base.svg';
+import flammiSleeping from '@/assets/adult-stage/flammi/flammi-sleeping.svg';
+import froggiBase from '@/assets/adult-stage/froggi/froggi-base.svg';
+import froggiSleeping from '@/assets/adult-stage/froggi/froggi-sleeping.svg';
+import leafyBase from '@/assets/adult-stage/leafy/leafy-base.svg';
+import leafySleeping from '@/assets/adult-stage/leafy/leafy-sleeping.svg';
+import mushieBase from '@/assets/adult-stage/mushie/mushie-base.svg';
+import mushieSleeping from '@/assets/adult-stage/mushie/mushie-sleeping.svg';
+import owliBase from '@/assets/adult-stage/owli/owli-base.svg';
+import owliSleeping from '@/assets/adult-stage/owli/owli-sleeping.svg';
+import pandiBase from '@/assets/adult-stage/pandi/pandi-base.svg';
+import pandiSleeping from '@/assets/adult-stage/pandi/pandi-sleeping.svg';
+import rockyBase from '@/assets/adult-stage/rocky/rocky-base.svg';
+import rockySleeping from '@/assets/adult-stage/rocky/rocky-sleeping.svg';
+import roseyBase from '@/assets/adult-stage/rosey/rosey-base.svg';
+import roseySleeping from '@/assets/adult-stage/rosey/rosey-sleeping.svg';
+import starriBase from '@/assets/adult-stage/starri/starri-base.svg';
+import starriSleeping from '@/assets/adult-stage/starri/starri-sleeping.svg';
+
 const adultSvgs: Record<BlobbiEvolutionForm, { base: string; sleeping: string }> = {
   blobbi: {
-    base: '/src/assets/baby-stage/baby/blobbi-baby-base.svg',
-    sleeping: '/src/assets/baby-stage/baby/blobbi-baby-sleeping.svg',
+    base: blobbiBaseSvg,
+    sleeping: blobbiSleepingSvg,
   },
   pandi: {
-    base: '/src/assets/adult-stage/pandi/pandi-base.svg',
-    sleeping: '/src/assets/adult-stage/pandi/pandi-sleeping.svg',
+    base: pandiBase,
+    sleeping: pandiSleeping,
   },
   owli: {
-    base: '/src/assets/adult-stage/owli/owli-base.svg',
-    sleeping: '/src/assets/adult-stage/owli/owli-sleeping.svg',
+    base: owliBase,
+    sleeping: owliSleeping,
   },
   catti: {
-    base: '/src/assets/adult-stage/catti/catti-base.svg',
-    sleeping: '/src/assets/adult-stage/catti/catti-sleeping.svg',
+    base: cattiBase,
+    sleeping: cattiSleeping,
   },
   froggi: {
-    base: '/src/assets/adult-stage/froggi/froggi-base.svg',
-    sleeping: '/src/assets/adult-stage/froggi/froggi-sleeping.svg',
+    base: froggiBase,
+    sleeping: froggiSleeping,
   },
   cloudi: {
-    base: '/src/assets/adult-stage/cloudi/cloudi-base.svg',
-    sleeping: '/src/assets/adult-stage/cloudi/cloudi-sleeping.svg',
+    base: cloudiBase,
+    sleeping: cloudiSleeping,
   },
   crysti: {
-    base: '/src/assets/adult-stage/crysti/crysti-base.svg',
-    sleeping: '/src/assets/adult-stage/crysti/crysti-sleeping.svg',
+    base: crystiBase,
+    sleeping: crystiSleeping,
   },
   bloomi: {
-    base: '/src/assets/adult-stage/bloomi/bloomi-base.svg',
-    sleeping: '/src/assets/adult-stage/bloomi/bloomi-sleeping.svg',
+    base: bloomiBase,
+    sleeping: bloomiSleeping,
   },
   starri: {
-    base: '/src/assets/adult-stage/starri/starri-base.svg',
-    sleeping: '/src/assets/adult-stage/starri/starri-sleeping.svg',
+    base: starriBase,
+    sleeping: starriSleeping,
   },
   flammi: {
-    base: '/src/assets/adult-stage/flammi/flammi-base.svg',
-    sleeping: '/src/assets/adult-stage/flammi/flammi-sleeping.svg',
+    base: flammiBase,
+    sleeping: flammiSleeping,
   },
   droppi: {
-    base: '/src/assets/adult-stage/droppi/droppi-base.svg',
-    sleeping: '/src/assets/adult-stage/droppi/droppi-sleeping.svg',
+    base: droppiBase,
+    sleeping: droppiSleeping,
   },
   breezy: {
-    base: '/src/assets/adult-stage/breezy/breezy-base.svg',
-    sleeping: '/src/assets/adult-stage/breezy/breezy-sleeping.svg',
+    base: breezyBase,
+    sleeping: breezySleeping,
   },
   rocky: {
-    base: '/src/assets/adult-stage/rocky/rocky-base.svg',
-    sleeping: '/src/assets/adult-stage/rocky/rocky-sleeping.svg',
+    base: rockyBase,
+    sleeping: rockySleeping,
   },
   cacti: {
-    base: '/src/assets/adult-stage/cacti/cacti-base.svg',
-    sleeping: '/src/assets/adult-stage/cacti/cacti-sleeping.svg',
+    base: cactiBase,
+    sleeping: cactiSleeping,
   },
   mushie: {
-    base: '/src/assets/adult-stage/mushie/mushie-base.svg',
-    sleeping: '/src/assets/adult-stage/mushie/mushie-sleeping.svg',
+    base: mushieBase,
+    sleeping: mushieSleeping,
   },
   leafy: {
-    base: '/src/assets/adult-stage/leafy/leafy-base.svg',
-    sleeping: '/src/assets/adult-stage/leafy/leafy-sleeping.svg',
+    base: leafyBase,
+    sleeping: leafySleeping,
   },
   rosey: {
-    base: '/src/assets/adult-stage/rosey/rosey-base.svg',
-    sleeping: '/src/assets/adult-stage/rosey/rosey-sleeping.svg',
+    base: roseyBase,
+    sleeping: roseySleeping,
   },
 };
 
@@ -87,11 +124,11 @@ export const AdultGraphic: React.FC<AdultGraphicProps> = ({
 }) => {
   // Get the evolution form or default to 'blobbi'
   const evolutionForm = blobbi.evolutionForm || 'blobbi';
-  
+
   // Determine which SVG to use based on blobbi state
   const isSleeping = blobbi.isSleeping || blobbi.state === 'sleeping';
-  const svgPath = isSleeping 
-    ? adultSvgs[evolutionForm].sleeping 
+  const svgPath = isSleeping
+    ? adultSvgs[evolutionForm].sleeping
     : adultSvgs[evolutionForm].base;
 
   return (

@@ -1,6 +1,9 @@
 import React from 'react';
 import { cn } from '@/lib/utils';
 import { Blobbi } from '@/types/blobbi';
+import blobbiBaseSvg from '@/assets/baby-stage/baby/blobbi-baby-base.svg';
+import blobbiNeonSvg from '@/assets/baby-stage/baby/blobbi-baby-neon.svg';
+import blobbiSleepingSvg from '@/assets/baby-stage/baby/blobbi-baby-sleeping.svg';
 
 interface BabyGraphicProps {
   blobbi: Blobbi;
@@ -16,15 +19,15 @@ export const BabyGraphic: React.FC<BabyGraphicProps> = ({
   // Determine which SVG to use based on blobbi state
   const getSvgSrc = () => {
     if (blobbi.isSleeping || blobbi.state === 'sleeping') {
-      return '/src/assets/baby-stage/baby/blobbi-baby-sleeping.svg';
+      return blobbiSleepingSvg;
     }
 
     // Use neon variant for divine or special blobbis
     if (blobbi.themeVariant === 'divine' || blobbi.crossoverApp === 'divine') {
-      return '/src/assets/baby-stage/baby/blobbi-baby-neon.svg';
+      return blobbiNeonSvg;
     }
 
-    return '/src/assets/baby-stage/baby/blobbi-baby-base.svg';
+    return blobbiBaseSvg;
   };
 
   return (

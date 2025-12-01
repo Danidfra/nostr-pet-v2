@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Blobbi } from '@/types/blobbi';
 import { EggGraphic } from '@/components/blobbi/EggGraphic';
 import { BabyGraphic } from '@/components/blobbi/BabyGraphic';
@@ -60,12 +59,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
     setCurrentRoom(ROOMS[nextIndex]);
   };
 
-  // Blobbi selector
-  const nextBlobbi = () => {
+  // Blobbi selector (currently not shown in UI, but kept for future use)
+  const _nextBlobbi = () => {
     setCurrentBlobbiIndex((prev) => (prev + 1) % blobbis.length);
   };
 
-  const prevBlobbi = () => {
+  const _prevBlobbi = () => {
     setCurrentBlobbiIndex((prev) => (prev - 1 + blobbis.length) % blobbis.length);
   };
 
@@ -133,8 +132,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
             <p className="text-xs text-muted-foreground">{userName}</p>
           </div>
 
-          {/* Center: Status circles */}
-          <div className="flex items-center gap-2 flex-wrap justify-center">
+          {/* Center: Status circles - DESKTOP ONLY */}
+          <div className="hidden md:flex items-center gap-2 justify-center">
             <StatusCircle
               icon={Heart}
               value={currentBlobbi.stats.health}
@@ -174,96 +173,53 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
         </div>
       </header>
 
-      {/* MAIN AREA - Blobbi centered directly */}
-      <main className="flex-1 flex items-center justify-center p-4 relative overflow-hidden">
-        <div className="flex flex-col items-center justify-center max-h-full w-full max-w-md">
-          {/* Blobbi name and info */}
-          <div className="mb-4 text-center">
-            <h2 className="text-3xl font-bold mb-2">{currentBlobbi.name}</h2>
-            <div className="flex justify-center gap-2 mb-2">
-              <Badge variant="secondary" className="capitalize">
-                {currentBlobbi.lifeStage}
-              </Badge>
-              {currentBlobbi.evolutionForm && (
-                <Badge variant="outline" className="capitalize">
-                  {currentBlobbi.evolutionForm}
-                </Badge>
-              )}
-            </div>
-
-            {/* Multiple Blobbis selector */}
-            {hasMultipleBlobbis && currentRoom === 'MY_BLOBBI' && (
-              <div className="flex items-center justify-center gap-3">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={prevBlobbi}
-                  className="rounded-full h-8 w-8"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm text-muted-foreground">
-                  {currentBlobbiIndex + 1} of {blobbis.length}
-                </span>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={nextBlobbi}
-                  className="rounded-full h-8 w-8"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-          </div>
-
-          {/* Blobbi graphic - main focus */}
-          {isRoomLocked() ? (
-            // Locked room for eggs
-            <div className="text-center space-y-4">
-              <div className="text-6xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold">Room Locked</h3>
-              <p className="text-muted-foreground">
-                This room will unlock when your Blobbi hatches!
-              </p>
-              <div className="mt-6">
-                {renderBlobbiGraphic()}
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="mb-6 scale-150">
-                {renderBlobbiGraphic()}
-              </div>
-
-              {/* Optional small info panel below Blobbi */}
-              {currentRoom === 'MY_BLOBBI' && isEgg && (
-                <div className="w-full max-w-xs">
-                  <div className="bg-white/70 backdrop-blur-sm rounded-lg p-3 shadow-sm">
-                    <div className="flex items-center justify-between mb-2">
-                      <div className="flex items-center gap-2">
-                        <Thermometer className="h-4 w-4 text-orange-500" />
-                        <span className="text-sm font-medium">Temperature</span>
-                      </div>
-                      <Badge variant={eggTemperature > 70 ? 'default' : 'secondary'} className="text-xs">
-                        {eggTemperature}°
-                      </Badge>
-                    </div>
-                    <div className="w-full bg-gradient-to-r from-blue-200 via-yellow-200 to-red-200 h-2 rounded-full overflow-hidden">
-                      <div
-                        className="bg-orange-500 h-full transition-all duration-300"
-                        style={{ width: `${eggTemperature}%` }}
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground text-center mt-2">
-                      Keep warm to help it hatch!
-                    </p>
-                  </div>
-                </div>
-              )}
-            </>
-          )}
+      {/* STATUS ROW - MOBILE ONLY */}
+      <div className="flex-none md:hidden bg-white/60 backdrop-blur-sm border-b border-purple-100 py-2">
+        <div className="w-full px-4 flex items-center justify-center gap-2">
+          <StatusCircle
+            icon={Heart}
+            value={currentBlobbi.stats.health}
+            label="Health"
+          />
+          <StatusCircle
+            icon={Utensils}
+            value={currentBlobbi.stats.hunger}
+            label="Hunger"
+          />
+          <StatusCircle
+            icon={Smile}
+            value={currentBlobbi.stats.happiness}
+            label="Happiness"
+          />
+          <StatusCircle
+            icon={Zap}
+            value={currentBlobbi.stats.energy}
+            label="Energy"
+          />
+          <StatusCircle
+            icon={Droplet}
+            value={currentBlobbi.stats.hygiene}
+            label="Hygiene"
+          />
         </div>
+      </div>
+
+      {/* MAIN AREA - ONLY Blobbi graphic centered */}
+      <main className="flex-1 flex items-center justify-center relative overflow-hidden">
+        {isRoomLocked() ? (
+          // Locked room for eggs
+          <div className="text-center space-y-4">
+            <div className="text-6xl mb-4">🔒</div>
+            <h3 className="text-xl font-semibold">Room Locked</h3>
+            <p className="text-muted-foreground">
+              This room will unlock when your Blobbi hatches!
+            </p>
+          </div>
+        ) : (
+          <div className="scale-125">
+            {renderBlobbiGraphic()}
+          </div>
+        )}
       </main>
 
       {/* ROOM NAVIGATION BAR */}
