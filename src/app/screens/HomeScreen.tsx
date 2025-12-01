@@ -1,10 +1,18 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Blobbi } from '@/types/blobbi';
 import { EggGraphic } from '@/components/blobbi/EggGraphic';
 import { BabyGraphic } from '@/components/blobbi/BabyGraphic';
 import { AdultGraphic } from '@/components/blobbi/AdultGraphic';
 import { StatusCircle } from '@/components/blobbi/StatusCircle';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 import {
   Heart,
   Utensils,
@@ -12,17 +20,21 @@ import {
   Zap,
   ChevronLeft,
   ChevronRight,
-  Settings,
-  ShoppingCart,
-  Info,
+  Menu,
+  Camera,
+  Backpack,
   Thermometer,
-  Play,
+  Music,
+  Bed,
+  Gamepad2,
+  Baby,
   Target,
   TrendingUp,
   Lightbulb,
-  Smile,
-  Dices,
   Droplet,
+  LogOut,
+  Settings,
+  ShoppingCart,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 
@@ -36,14 +48,16 @@ type Room = 'MY_BLOBBI' | 'GROWTH_HUB' | 'PLAYROOM';
 
 const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLogout }) => {
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
-  const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
-  const [eggTemperature, setEggTemperature] = useState(65);
+  const [currentBlobbiIndex] = useState(0);
+  const [isActionsOpen, setIsActionsOpen] = useState(false);
   const { toast } = useToast();
 
   const currentBlobbi = blobbis[currentBlobbiIndex];
   const isEgg = currentBlobbi.lifeStage === 'egg';
+  const isBaby = currentBlobbi.lifeStage === 'baby';
+  const isAdult = currentBlobbi.lifeStage === 'adult';
   const hasMultipleBlobbis = blobbis.length > 1;
 
   // Room navigation
@@ -59,15 +73,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
     setCurrentRoom(ROOMS[nextIndex]);
   };
 
-  // Blobbi selector (currently not shown in UI, but kept for future use)
-  const _nextBlobbi = () => {
-    setCurrentBlobbiIndex((prev) => (prev + 1) % blobbis.length);
-  };
-
-  const _prevBlobbi = () => {
-    setCurrentBlobbiIndex((prev) => (prev - 1 + blobbis.length) % blobbis.length);
-  };
-
   // Actions
   const handleAction = (action: string, effect?: () => void) => {
     if (effect) effect();
@@ -75,15 +80,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
       title: `${action}!`,
       description: `You ${action.toLowerCase()} ${currentBlobbi.name}.`,
     });
-  };
-
-  const warmEgg = () => {
-    setEggTemperature((prev) => Math.min(100, prev + 10));
-    handleAction('Warmed the egg');
-  };
-
-  const shakeEgg = () => {
-    handleAction('Shook the egg');
   };
 
   // Get room title
@@ -104,7 +100,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
   const renderBlobbiGraphic = () => {
     switch (currentBlobbi.lifeStage) {
       case 'egg':
-        return <EggGraphic blobbi={{ ...currentBlobbi, eggTemperature }} animated={true} />;
+        return <EggGraphic blobbi={currentBlobbi} animated={true} />;
       case 'baby':
         return <BabyGraphic blobbi={currentBlobbi} animated={true} />;
       case 'adult':
@@ -119,11 +115,212 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
     return isEgg && currentRoom !== 'MY_BLOBBI';
   };
 
+  // Render actions based on room and life stage
+  const renderActions = () => {
+    if (isRoomLocked()) {
+      return (
+        <div className="text-center py-6">
+          <p className="text-sm text-muted-foreground">
+            Room locked until your Blobbi hatches
+          </p>
+        </div>
+      );
+    }
+
+    // MY_BLOBBI room
+    if (currentRoom === 'MY_BLOBBI') {
+      if (isEgg) {
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleAction('Warmed the egg')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            >
+              <Thermometer className="h-5 w-5" />
+              <span className="text-xs">Warm</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Sang to the egg')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
+            >
+              <Music className="h-5 w-5" />
+              <span className="text-xs">Sing</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Gave medicine')}
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+            >
+              <Heart className="h-5 w-5" />
+              <span className="text-xs">Medicine</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Cleaned')}
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+            >
+              <Sparkles className="h-5 w-5" />
+              <span className="text-xs">Clean</span>
+            </Button>
+          </div>
+        );
+      }
+
+      if (isBaby) {
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleAction('Fed')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            >
+              <Utensils className="h-5 w-5" />
+              <span className="text-xs">Feed</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Cleaned')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+            >
+              <Sparkles className="h-5 w-5" />
+              <span className="text-xs">Clean</span>
+            </Button>
+            <Button
+              onClick={() => handleAction(currentBlobbi.isSleeping ? 'Woke up' : 'Put to sleep')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+            >
+              <Bed className="h-5 w-5" />
+              <span className="text-xs">Sleep</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Gave medicine')}
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+            >
+              <Heart className="h-5 w-5" />
+              <span className="text-xs">Medicine</span>
+            </Button>
+          </div>
+        );
+      }
+
+      if (isAdult) {
+        return (
+          <div className="grid grid-cols-2 gap-3">
+            <Button
+              onClick={() => handleAction('Fed')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
+            >
+              <Utensils className="h-5 w-5" />
+              <span className="text-xs">Feed</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Cleaned')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
+            >
+              <Sparkles className="h-5 w-5" />
+              <span className="text-xs">Clean</span>
+            </Button>
+            <Button
+              onClick={() => handleAction(currentBlobbi.isSleeping ? 'Woke up' : 'Put to sleep')}
+              className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
+            >
+              <Bed className="h-5 w-5" />
+              <span className="text-xs">Sleep</span>
+            </Button>
+            <Button
+              onClick={() => handleAction('Gave medicine')}
+              variant="outline"
+              className="h-16 flex flex-col gap-1"
+            >
+              <Heart className="h-5 w-5" />
+              <span className="text-xs">Medicine</span>
+            </Button>
+            <Button
+              disabled
+              variant="outline"
+              className="h-16 flex flex-col gap-1 col-span-2 relative"
+            >
+              <Baby className="h-5 w-5" />
+              <span className="text-xs">Breed</span>
+              <Badge variant="secondary" className="absolute top-1 right-1 text-[10px] px-1 py-0">
+                Soon
+              </Badge>
+            </Button>
+          </div>
+        );
+      }
+    }
+
+    // PLAYROOM
+    if (currentRoom === 'PLAYROOM') {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => handleAction('Played with toys')}
+            className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
+          >
+            <Gamepad2 className="h-5 w-5" />
+            <span className="text-xs">Toys</span>
+          </Button>
+          <Button
+            onClick={() => handleAction('Started a game')}
+            className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+          >
+            <Zap className="h-5 w-5" />
+            <span className="text-xs">Games</span>
+          </Button>
+        </div>
+      );
+    }
+
+    // GROWTH_HUB
+    if (currentRoom === 'GROWTH_HUB') {
+      return (
+        <div className="grid grid-cols-2 gap-3">
+          <Button
+            onClick={() => handleAction('Started growth activity')}
+            className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+          >
+            <Target className="h-5 w-5" />
+            <span className="text-xs">Start Activity</span>
+          </Button>
+          <Button
+            onClick={() => handleAction('Viewed progress')}
+            className="h-16 flex flex-col gap-1 bg-gradient-to-br from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600"
+          >
+            <TrendingUp className="h-5 w-5" />
+            <span className="text-xs">View Progress</span>
+          </Button>
+          <Button
+            onClick={() => {
+              const prompts = [
+                'What made you smile today?',
+                'Name one thing you\'re grateful for',
+                'What\'s your goal for tomorrow?'
+              ];
+              const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
+              toast({
+                title: '💭 Growth Prompt',
+                description: randomPrompt,
+              });
+            }}
+            variant="outline"
+            className="h-16 flex flex-col gap-1 col-span-2"
+          >
+            <Lightbulb className="h-5 w-5" />
+            <span className="text-xs">Random Prompt</span>
+          </Button>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
-      {/* HEADER */}
+      {/* HEADER - Row 1: Logo + Menu */}
       <header className="flex-none bg-white/80 backdrop-blur-sm border-b border-purple-100">
-        <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+        <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left: App name and user */}
           <div className="flex-shrink-0">
             <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -132,50 +329,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
             <p className="text-xs text-muted-foreground">{userName}</p>
           </div>
 
-          {/* Center: Status circles - DESKTOP ONLY */}
-          <div className="hidden md:flex items-center gap-2 justify-center">
-            <StatusCircle
-              icon={Heart}
-              value={currentBlobbi.stats.health}
-              label="Health"
-            />
-            <StatusCircle
-              icon={Utensils}
-              value={currentBlobbi.stats.hunger}
-              label="Hunger"
-            />
-            <StatusCircle
-              icon={Smile}
-              value={currentBlobbi.stats.happiness}
-              label="Happiness"
-            />
-            <StatusCircle
-              icon={Zap}
-              value={currentBlobbi.stats.energy}
-              label="Energy"
-            />
-            <StatusCircle
-              icon={Droplet}
-              value={currentBlobbi.stats.hygiene}
-              label="Hygiene"
-            />
-          </div>
-
-          {/* Right: Settings and Shop */}
-          <div className="flex gap-2 flex-shrink-0">
-            <Button variant="ghost" size="icon" onClick={() => handleAction('Settings')}>
-              <Settings className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => handleAction('Shop')}>
-              <ShoppingCart className="h-5 w-5" />
-            </Button>
-          </div>
+          {/* Right: Hamburger menu */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
+                <ShoppingCart className="mr-2 h-4 w-4" />
+                Shop
+              </DropdownMenuItem>
+              {onLogout && (
+                <DropdownMenuItem onClick={onLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </header>
 
-      {/* STATUS ROW - MOBILE ONLY */}
-      <div className="flex-none md:hidden bg-white/60 backdrop-blur-sm border-b border-purple-100 py-2">
-        <div className="w-full px-4 flex items-center justify-center gap-2">
+      {/* HEADER - Row 2: Status circles */}
+      <div className="flex-none bg-white/60 backdrop-blur-sm border-b border-purple-100 py-2">
+        <div className="w-full max-w-4xl mx-auto px-4 flex items-center justify-center gap-2 flex-wrap">
           <StatusCircle
             icon={Heart}
             value={currentBlobbi.stats.health}
@@ -187,7 +370,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
             label="Hunger"
           />
           <StatusCircle
-            icon={Smile}
+            icon={Sparkles}
             value={currentBlobbi.stats.happiness}
             label="Happiness"
           />
@@ -216,13 +399,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
             </p>
           </div>
         ) : (
-          <div className="scale-125">
-            {renderBlobbiGraphic()}
+          <div className="flex flex-col items-center">
+            {/* Blobbi name and small badges */}
+            <div className="mb-2 text-center">
+              <h2 className="text-2xl font-bold mb-1">{currentBlobbi.name}</h2>
+              <div className="flex justify-center gap-2">
+                <Badge variant="secondary" className="capitalize text-xs">
+                  {currentBlobbi.lifeStage}
+                </Badge>
+                {currentBlobbi.evolutionForm && (
+                  <Badge variant="outline" className="capitalize text-xs">
+                    {currentBlobbi.evolutionForm}
+                  </Badge>
+                )}
+              </div>
+            </div>
+            
+            {/* Blobbi graphic */}
+            <div className="scale-125">
+              {renderBlobbiGraphic()}
+            </div>
           </div>
         )}
       </main>
 
-      {/* ROOM NAVIGATION BAR */}
+      {/* FOOTER - Row 1: Room navigation */}
       <div className="flex-none bg-white/80 backdrop-blur-sm border-t border-purple-100">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <Button
@@ -245,176 +446,50 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName }) => 
         </div>
       </div>
 
-      {/* FOOTER - ACTIONS (changes based on room) */}
-      <footer className="flex-none bg-white border-t-2 border-purple-200 shadow-lg">
-        <div className="w-full max-w-md mx-auto px-4 py-4">
-          {currentRoom === 'MY_BLOBBI' && isEgg && (
-            // Egg actions
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={warmEgg}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                <Thermometer className="h-5 w-5" />
-                <span className="text-xs">Warm Egg</span>
-              </Button>
-              <Button
-                onClick={shakeEgg}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
-              >
-                <Sparkles className="h-5 w-5" />
-                <span className="text-xs">Shake Egg</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Check Egg')}
-                variant="outline"
-                className="h-16 flex flex-col gap-1"
-              >
-                <Info className="h-5 w-5" />
-                <span className="text-xs">Check</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Sing to Egg')}
-                variant="outline"
-                className="h-16 flex flex-col gap-1"
-              >
-                <Heart className="h-5 w-5" />
-                <span className="text-xs">Sing</span>
-              </Button>
-            </div>
-          )}
+      {/* FOOTER - Row 2: Camera / Actions / Backpack */}
+      <div className="flex-none bg-white border-t-2 border-purple-200">
+        <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          {/* Camera */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
+            className="rounded-full"
+          >
+            <Camera className="h-5 w-5" />
+          </Button>
 
-          {currentRoom === 'MY_BLOBBI' && !isEgg && (
-            // Regular Blobbi actions
-            <div className="grid grid-cols-3 gap-2">
-              <Button
-                onClick={() => handleAction('Feed')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
-              >
-                <Utensils className="h-5 w-5" />
-                <span className="text-xs">Feed</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Clean')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
-              >
-                <Sparkles className="h-5 w-5" />
-                <span className="text-xs">Clean</span>
-              </Button>
-              <Button
-                onClick={() => handleAction(currentBlobbi.isSleeping ? 'Wake' : 'Sleep')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
-              >
-                <Zap className="h-5 w-5" />
-                <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Medicine')}
-                variant="outline"
-                className="h-16 flex flex-col gap-1"
-              >
-                <Heart className="h-5 w-5" />
-                <span className="text-xs">Medicine</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Info')}
-                variant="outline"
-                className="h-16 flex flex-col gap-1 col-span-2"
-              >
-                <Info className="h-5 w-5" />
-                <span className="text-xs">Blobbi Info</span>
-              </Button>
-            </div>
-          )}
+          {/* Actions button */}
+          <Button
+            onClick={() => setIsActionsOpen(!isActionsOpen)}
+            className="flex-1 max-w-[200px] h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+          >
+            Actions
+          </Button>
 
-          {currentRoom === 'GROWTH_HUB' && !isRoomLocked() && (
-            // Growth Hub actions
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => handleAction('Start Growth Activity')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-              >
-                <Target className="h-5 w-5" />
-                <span className="text-xs">Start Activity</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('View Progress')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600"
-              >
-                <TrendingUp className="h-5 w-5" />
-                <span className="text-xs">View Progress</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Random Prompt', () => {
-                  const prompts = [
-                    'What made you smile today?',
-                    'Name one thing you\'re grateful for',
-                    'What\'s your goal for tomorrow?'
-                  ];
-                  const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-                  toast({
-                    title: '💭 Growth Prompt',
-                    description: randomPrompt,
-                  });
-                })}
-                variant="outline"
-                className="h-16 flex flex-col gap-1 col-span-2"
-              >
-                <Lightbulb className="h-5 w-5" />
-                <span className="text-xs">Random Prompt</span>
-              </Button>
-            </div>
-          )}
-
-          {currentRoom === 'PLAYROOM' && !isRoomLocked() && (
-            // Playroom actions
-            <div className="grid grid-cols-2 gap-3">
-              <Button
-                onClick={() => handleAction('Play Mini-Game')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-              >
-                <Play className="h-5 w-5" />
-                <span className="text-xs">Mini-Game</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Throw Ball')}
-                className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
-              >
-                <Dices className="h-5 w-5" />
-                <span className="text-xs">Throw Ball</span>
-              </Button>
-              <Button
-                onClick={() => handleAction('Tell Joke', () => {
-                  const jokes = [
-                    '🤣 Why don\'t eggs tell jokes? They\'d crack up!',
-                    '😄 What do you call a Blobbi with a crown? Royal-ty!',
-                    '😂 Why did the Blobbi cross the road? To get to the other slide!'
-                  ];
-                  const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
-                  toast({
-                    title: 'Joke Time!',
-                    description: randomJoke,
-                  });
-                })}
-                variant="outline"
-                className="h-16 flex flex-col gap-1 col-span-2"
-              >
-                <Smile className="h-5 w-5" />
-                <span className="text-xs">Tell Joke</span>
-              </Button>
-            </div>
-          )}
-
-          {isRoomLocked() && (
-            // Locked room footer
-            <div className="text-center py-4">
-              <p className="text-sm text-muted-foreground">
-                Room locked until your Blobbi hatches
-              </p>
-            </div>
-          )}
+          {/* Backpack */}
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+            className="rounded-full"
+          >
+            <Backpack className="h-5 w-5" />
+          </Button>
         </div>
-      </footer>
+      </div>
+
+      {/* ACTIONS PANEL - Slide up drawer */}
+      <div
+        className={cn(
+          "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-20 transition-transform duration-300 ease-in-out",
+          isActionsOpen ? "translate-y-0" : "translate-y-full"
+        )}
+      >
+        <div className="bg-white/95 backdrop-blur-sm border-t-2 border-purple-200 rounded-t-2xl shadow-2xl pt-6 pb-6 px-4">
+          {renderActions()}
+        </div>
+      </div>
     </div>
   );
 };
