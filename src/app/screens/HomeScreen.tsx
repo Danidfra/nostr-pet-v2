@@ -344,7 +344,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       style={{
         backgroundImage: `url(${BlobbiBackground})`,
         backgroundRepeat: 'repeat',
-        backgroundSize: 'auto',
+        backgroundSize: '120px 120px',
       }}
     >
       {/* HEADER - Row 1: Logo + Menu */}
