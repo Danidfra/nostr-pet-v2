@@ -35,6 +35,7 @@ import {
   LogOut,
   Settings,
   ShoppingCart,
+  X,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 
@@ -317,9 +318,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 overflow-hidden">
+    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:bg-gradient-to-br dark:from-slate-900 dark:via-violet-900 dark:to-slate-950 overflow-hidden">
       {/* HEADER - Row 1: Logo + Menu */}
-      <header className="flex-none bg-white/80 backdrop-blur-sm border-b border-purple-100">
+      <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
         <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left: App name and user */}
           <div className="flex-shrink-0">
@@ -357,7 +358,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       </header>
 
       {/* HEADER - Row 2: Status circles */}
-      <div className="flex-none bg-white/60 backdrop-blur-sm border-b border-purple-100 py-2">
+      <div className="flex-none bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700 py-2">
         <div className="w-full max-w-4xl mx-auto px-4 flex items-center justify-center gap-2 flex-wrap">
           <StatusCircle
             icon={Heart}
@@ -402,7 +403,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           <div className="flex flex-col items-center">
             {/* Blobbi name and small badges */}
             <div className="mb-2 text-center">
-              <h2 className="text-2xl font-bold mb-1">{currentBlobbi.name}</h2>
+              <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-slate-100">{currentBlobbi.name}</h2>
               <div className="flex justify-center gap-2">
                 <Badge variant="secondary" className="capitalize text-xs">
                   {currentBlobbi.lifeStage}
@@ -414,7 +415,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
                 )}
               </div>
             </div>
-            
+
             {/* Blobbi graphic */}
             <div className="scale-125">
               {renderBlobbiGraphic()}
@@ -424,7 +425,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       </main>
 
       {/* FOOTER - Row 1: Room navigation */}
-      <div className="flex-none bg-white/80 backdrop-blur-sm border-t border-purple-100">
+      <div className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-t border-purple-100 dark:border-slate-700">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           <Button
             variant="ghost"
@@ -434,7 +435,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
-          <h3 className="font-semibold text-lg">{getRoomTitle()}</h3>
+          <h3 className="font-semibold text-lg text-slate-900 dark:text-slate-100">{getRoomTitle()}</h3>
           <Button
             variant="ghost"
             size="icon"
@@ -447,7 +448,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       </div>
 
       {/* FOOTER - Row 2: Camera / Actions / Backpack */}
-      <div className="flex-none bg-white border-t-2 border-purple-200">
+      <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-4">
           {/* Camera */}
           <Button
@@ -479,14 +480,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         </div>
       </div>
 
+      {/* BACKDROP - Semi-transparent overlay */}
+      {isActionsOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
+          onClick={() => setIsActionsOpen(false)}
+        />
+      )}
+
       {/* ACTIONS PANEL - Slide up drawer */}
       <div
         className={cn(
-          "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-20 transition-transform duration-300 ease-in-out",
+          "fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md z-40 transition-transform duration-300 ease-in-out",
           isActionsOpen ? "translate-y-0" : "translate-y-full"
         )}
       >
-        <div className="bg-white/95 backdrop-blur-sm border-t-2 border-purple-200 rounded-t-2xl shadow-2xl pt-6 pb-6 px-4">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t-2 border-purple-200 dark:border-slate-700 rounded-t-2xl shadow-2xl pt-6 pb-6 px-4 relative">
+          {/* Close button */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsActionsOpen(false)}
+            className="absolute top-2 right-2 h-8 w-8 rounded-full"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+
           {renderActions()}
         </div>
       </div>
