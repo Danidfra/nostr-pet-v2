@@ -12,6 +12,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
 import {
   Heart,
@@ -29,13 +35,13 @@ import {
   Gamepad2,
   Baby,
   Target,
-  TrendingUp,
-  Lightbulb,
   Droplet,
   LogOut,
   Settings,
   ShoppingCart,
   X,
+  ClipboardList,
+  Users,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 
@@ -51,8 +57,9 @@ const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLogout }) => {
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
-  const [currentBlobbiIndex] = useState(0);
+  const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const { toast } = useToast();
 
   const currentBlobbi = blobbis[currentBlobbiIndex];
@@ -81,6 +88,35 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       title: `${action}!`,
       description: `You ${action.toLowerCase()} ${currentBlobbi.name}.`,
     });
+  };
+
+  // Helper functions for Growth Hub
+  const getGrowthActionLabel = () => {
+    if (isEgg) return 'Start Incubation';
+    if (isBaby) return 'Start Evolution';
+    return 'Already Evolved';
+  };
+
+  const handleGrowthAction = () => {
+    if (isEgg) {
+      handleAction('Started incubation');
+    } else if (isBaby) {
+      handleAction('Started evolution');
+    } else {
+      toast({
+        title: 'Already Evolved',
+        description: `${currentBlobbi.name} is already fully evolved!`,
+      });
+    }
+  };
+
+  const openTasksModal = () => {
+    setIsActionsOpen(false);
+    setIsTasksModalOpen(true);
+  };
+
+  const cycleBlobbi = () => {
+    setCurrentBlobbiIndex((prev) => (prev + 1) % blobbis.length);
   };
 
   // Get room title
@@ -273,42 +309,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       );
     }
 
-    // GROWTH_HUB
+    // GROWTH_HUB - Only used if Actions panel is opened from My Blobbies room
     if (currentRoom === 'GROWTH_HUB') {
       return (
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => handleAction('Started growth activity')}
+            onClick={handleGrowthAction}
             className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
           >
             <Target className="h-5 w-5" />
-            <span className="text-xs">Start Activity</span>
+            <span className="text-xs">{getGrowthActionLabel()}</span>
           </Button>
           <Button
-            onClick={() => handleAction('Viewed progress')}
+            onClick={openTasksModal}
             className="h-16 flex flex-col gap-1 bg-gradient-to-br from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600"
           >
-            <TrendingUp className="h-5 w-5" />
-            <span className="text-xs">View Progress</span>
-          </Button>
-          <Button
-            onClick={() => {
-              const prompts = [
-                'What made you smile today?',
-                'Name one thing you\'re grateful for',
-                'What\'s your goal for tomorrow?'
-              ];
-              const randomPrompt = prompts[Math.floor(Math.random() * prompts.length)];
-              toast({
-                title: '💭 Growth Prompt',
-                description: randomPrompt,
-              });
-            }}
-            variant="outline"
-            className="h-16 flex flex-col gap-1 col-span-2"
-          >
-            <Lightbulb className="h-5 w-5" />
-            <span className="text-xs">Random Prompt</span>
+            <ClipboardList className="h-5 w-5" />
+            <span className="text-xs">Tasks</span>
           </Button>
         </div>
       );
@@ -447,36 +464,138 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         </div>
       </div>
 
-      {/* FOOTER - Row 2: Camera / Actions / Backpack */}
+      {/* FOOTER - Row 2: Per-room navigation */}
       <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
-        <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          {/* Camera */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
-            className="rounded-full"
-          >
-            <Camera className="h-5 w-5" />
-          </Button>
+        <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-around">
+          {currentRoom === 'MY_BLOBBI' && (
+            <>
+              {/* Camera */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Camera className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Camera</span>
+              </div>
 
-          {/* Actions button */}
-          <Button
-            onClick={() => setIsActionsOpen(!isActionsOpen)}
-            className="flex-1 max-w-[200px] h-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-          >
-            Actions
-          </Button>
+              {/* Actions */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  onClick={() => setIsActionsOpen(!isActionsOpen)}
+                  className="rounded-full h-12 w-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+                >
+                  <Sparkles className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Actions</span>
+              </div>
 
-          {/* Backpack */}
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
-            className="rounded-full"
-          >
-            <Backpack className="h-5 w-5" />
-          </Button>
+              {/* Backpack */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Backpack className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Inventory</span>
+              </div>
+            </>
+          )}
+
+          {currentRoom === 'GROWTH_HUB' && (
+            <>
+              {/* Tasks */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={openTasksModal}
+                  className="rounded-full h-12 w-12"
+                >
+                  <ClipboardList className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Tasks</span>
+              </div>
+
+              {/* Start Incubation/Evolution */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  onClick={handleGrowthAction}
+                  className="rounded-full h-12 w-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+                >
+                  <Target className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  {isEgg ? 'Incubate' : isBaby ? 'Evolve' : 'Evolved'}
+                </span>
+              </div>
+
+              {/* Blobbi selector */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={cycleBlobbi}
+                  disabled={!hasMultipleBlobbis}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Users className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">
+                  Blobbi {hasMultipleBlobbis && `${currentBlobbiIndex + 1}/${blobbis.length}`}
+                </span>
+              </div>
+            </>
+          )}
+
+          {currentRoom === 'PLAYROOM' && (
+            <>
+              {/* Games */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleAction('Started a game')}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Zap className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Games</span>
+              </div>
+
+              {/* Toys */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handleAction('Played with toys')}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Gamepad2 className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Toys</span>
+              </div>
+
+              {/* Backpack */}
+              <div className="flex flex-col items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+                  className="rounded-full h-12 w-12"
+                >
+                  <Backpack className="h-5 w-5" />
+                </Button>
+                <span className="text-xs text-muted-foreground">Inventory</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -509,6 +628,58 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           {renderActions()}
         </div>
       </div>
+
+      {/* TASKS MODAL */}
+      <Dialog open={isTasksModalOpen} onOpenChange={setIsTasksModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Growth Tasks</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {isAdult ? (
+              <div className="text-center py-6">
+                <p className="text-muted-foreground">
+                  Your Blobbi is already fully evolved! No more growth tasks for now.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {isEgg ? (
+                  <>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Keep egg warm</span>
+                      <span className="text-sm text-muted-foreground">50%</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Sing to your egg</span>
+                      <span className="text-sm text-muted-foreground">20%</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Check egg health</span>
+                      <span className="text-sm text-muted-foreground">75%</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Feed your Blobbi</span>
+                      <span className="text-sm text-muted-foreground">80%</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Play together</span>
+                      <span className="text-sm text-muted-foreground">60%</span>
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                      <span className="text-sm font-medium">Teach new tricks</span>
+                      <span className="text-sm text-muted-foreground">30%</span>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
