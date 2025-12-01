@@ -414,9 +414,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
               <button
                 type="button"
                 onClick={() => setIsStatusOpen(false)}
-                className="mt-1 h-5 w-8 flex items-center justify-center rounded-full bg-muted/80 text-muted-foreground hover:bg-muted transition-colors"
+                className="mt-1 inline-flex items-center gap-1 h-5 px-3 rounded-full bg-muted/80 text-muted-foreground hover:bg-muted transition-colors text-[10px]"
               >
                 <ChevronUp className="h-3 w-3" />
+                <span>Hide status</span>
               </button>
             </div>
           </div>
@@ -426,9 +427,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
             <button
               type="button"
               onClick={() => setIsStatusOpen(true)}
-              className="h-5 w-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm border border-purple-100/50 dark:border-slate-700/50 text-muted-foreground hover:bg-muted/80 transition-colors"
+              className="inline-flex items-center gap-1 h-5 px-3 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm border border-purple-100/50 dark:border-slate-700/50 text-muted-foreground hover:bg-muted/80 transition-colors text-[10px]"
             >
               <ChevronDown className="h-3 w-3" />
+              <span>Show status</span>
             </button>
           </div>
         )}
