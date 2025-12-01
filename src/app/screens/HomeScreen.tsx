@@ -348,22 +348,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       <div className="h-full w-full max-w-4xl mx-auto flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-900 dark:via-violet-900 dark:to-slate-950">
         {/* HEADER - Row 1: Logo + Navigation */}
         <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
-          <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
-            {/* Left: Daily missions */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => toast({ title: 'Daily missions', description: 'Daily missions coming soon' })}
-            >
-              <ClipboardList className="h-5 w-5" />
-            </Button>
+          <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
 
             {/* Center: Blobbi logo */}
             <div className="flex-shrink-0">
               <img
                 src={BlobbiLogo}
                 alt="Blobbi"
-                className="h-6 w-auto"
+                className="h-10 sm:h-14 w-auto"
               />
             </div>
 
