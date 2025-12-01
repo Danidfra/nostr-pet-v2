@@ -495,7 +495,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           isActionsOpen ? "translate-y-0" : "translate-y-full"
         )}
       >
-        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t-2 border-purple-200 dark:border-slate-700 rounded-t-2xl shadow-2xl pt-6 pb-6 px-4 relative">
+        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t-2 border-purple-200 dark:border-slate-700 rounded-t-2xl shadow-2xl pt-10 pb-6 px-8 relative">
           {/* Close button */}
           <Button
             variant="ghost"
