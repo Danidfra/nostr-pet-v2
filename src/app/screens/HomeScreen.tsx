@@ -29,7 +29,6 @@ import {
   ChevronUp,
   ChevronDown,
   Menu,
-  Camera,
   Backpack,
   Thermometer,
   Music,
@@ -43,7 +42,6 @@ import {
   ShoppingCart,
   X,
   ClipboardList,
-  Bell,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
 import BlobbiBackground from '@/assets/blobbi-background.png';
@@ -369,40 +367,30 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               />
             </div>
 
-            {/* Right: Notifications + Menu */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => toast({ title: 'Notifications', description: 'Notifications coming soon' })}
-              >
-                <Bell className="h-5 w-5" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Menu className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    Settings
+            {/* Right: Menu */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Menu className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
+                  <Settings className="mr-2 h-4 w-4" />
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
+                  <ShoppingCart className="mr-2 h-4 w-4" />
+                  Shop
+                </DropdownMenuItem>
+                {onLogout && (
+                  <DropdownMenuItem onClick={onLogout}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Logout
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Shop
-                  </DropdownMenuItem>
-                  {onLogout && (
-                    <DropdownMenuItem onClick={onLogout}>
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Logout
-                    </DropdownMenuItem>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </header>
 
@@ -497,56 +485,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
             <div className="scale-125">
               {renderBlobbiGraphic()}
             </div>
-
-            {/* Room-specific quick actions */}
-            <div className="mt-6 w-full">
-              {currentRoom === 'GROWTH_HUB' && (
-                <div className="space-y-3">
-                  <Button
-                    onClick={handleGrowthAction}
-                    className="w-full h-12 bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
-                  >
-                    <Target className="h-5 w-5 mr-2" />
-                    {getGrowthActionLabel()}
-                  </Button>
-                  <Button
-                    onClick={openTasksModal}
-                    variant="outline"
-                    className="w-full h-12"
-                  >
-                    <ClipboardList className="h-5 w-5 mr-2" />
-                    View growth tasks
-                  </Button>
-                </div>
-              )}
-
-              {currentRoom === 'PLAYROOM' && (
-                <div className="grid grid-cols-2 gap-3">
-                  <Button
-                    onClick={() => handleAction('Started a game')}
-                    className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
-                  >
-                    <Zap className="h-5 w-5" />
-                    <span className="text-xs">Games</span>
-                  </Button>
-                  <Button
-                    onClick={() => handleAction('Played with toys')}
-                    className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
-                  >
-                    <Gamepad2 className="h-5 w-5" />
-                    <span className="text-xs">Toys</span>
-                  </Button>
-                </div>
-              )}
-
-              {currentRoom === 'MY_BLOBBI' && (
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Use the Actions button below to take care of your Blobbi
-                  </p>
-                </div>
-              )}
-            </div>
           </div>
         )}
       </main>
@@ -575,17 +513,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
 
           {/* Fixed 3-button center layout */}
           <div className="flex items-center justify-around flex-1 gap-2">
-            {/* Inventory */}
+            {/* Missions */}
             <div className="flex flex-col items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+                onClick={() => toast({ title: 'Daily missions', description: 'Daily missions coming soon' })}
                 className="rounded-full h-12 w-12"
               >
-                <Backpack className="h-5 w-5" />
+                <ClipboardList className="h-5 w-5" />
               </Button>
-              <span className="text-xs text-muted-foreground">Inventory</span>
+              <span className="text-xs text-muted-foreground">Missions</span>
             </div>
 
             {/* Actions */}
@@ -599,17 +537,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               <span className="text-xs text-muted-foreground">Actions</span>
             </div>
 
-            {/* Camera */}
+            {/* Inventory */}
             <div className="flex flex-col items-center gap-1">
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
+                onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
                 className="rounded-full h-12 w-12"
               >
-                <Camera className="h-5 w-5" />
+                <Backpack className="h-5 w-5" />
               </Button>
-              <span className="text-xs text-muted-foreground">Camera</span>
+              <span className="text-xs text-muted-foreground">Inventory</span>
             </div>
           </div>
 
