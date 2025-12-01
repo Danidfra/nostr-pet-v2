@@ -46,6 +46,7 @@ import {
   Users,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
+import BlobbiBackground from '@/assets/blobbi-background.png';
 
 interface HomeScreenProps {
   blobbis: Blobbi[];
@@ -338,7 +339,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
   };
 
   return (
-    <div className="h-screen flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:bg-gradient-to-br dark:from-slate-900 dark:via-violet-900 dark:to-slate-950 overflow-hidden">
+    <div
+      className="h-screen flex flex-col overflow-hidden"
+      style={{
+        backgroundImage: `url(${BlobbiBackground})`,
+        backgroundRepeat: 'repeat',
+        backgroundSize: 'auto',
+      }}
+    >
       {/* HEADER - Row 1: Logo + Menu */}
       <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
         <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
@@ -436,15 +444,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         )}
       </div>
 
-      {/* ROOM TITLE ROW */}
-      <div className="flex-none">
-        <div className="w-full max-w-4xl mx-auto px-4 py-2">
-          <h2 className="text-lg font-semibold text-center text-slate-900 dark:text-slate-100">
-            {getRoomTitle()}
-          </h2>
-        </div>
-      </div>
-
       {/* MAIN AREA - ONLY Blobbi graphic centered */}
       <main className="flex-1 flex items-start justify-center relative overflow-hidden pt-4">
         {isRoomLocked() ? (
@@ -480,6 +479,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           </div>
         )}
       </main>
+
+      {/* ROOM TITLE ROW */}
+      <div className="flex-none">
+        <div className="w-full max-w-4xl mx-auto px-4 py-2">
+          <h2 className="text-lg font-semibold text-center text-slate-900 dark:text-slate-100">
+            {getRoomTitle()}
+          </h2>
+        </div>
+      </div>
 
       {/* FOOTER - Per-room navigation with arrows */}
       <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
