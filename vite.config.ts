@@ -12,6 +12,7 @@ export default defineConfig(() => ({
   plugins: [
     react(),
   ],
+  assetsInclude: ['**/*.svg'],
   test: {
     globals: true,
     environment: 'jsdom',

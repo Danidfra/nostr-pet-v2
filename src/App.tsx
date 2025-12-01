@@ -1,70 +1,90 @@
-// NOTE: This file should normally not be modified unless you are adding a new provider.
-// To add new routes, edit the AppRouter.tsx file.
-
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { createHead, UnheadProvider } from '@unhead/react/client';
-import { InferSeoMetaPlugin } from '@unhead/addons';
-import { Suspense } from 'react';
-import NostrProvider from '@/components/NostrProvider';
-import { NostrSync } from '@/components/NostrSync';
+import { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { NostrLoginProvider } from '@nostrify/react/login';
-import { AppProvider } from '@/components/AppProvider';
-import { NWCProvider } from '@/contexts/NWCContext';
-import { AppConfig } from '@/contexts/AppContext';
-import AppRouter from './AppRouter';
+import { AuthScreen } from '@/app/screens/AuthScreen';
+import { ProfileSetupScreen } from '@/app/screens/ProfileSetupScreen';
+import { BlobbiAdoptionScreen } from '@/app/screens/BlobbiAdoptionScreen';
+import { HomeScreen } from '@/app/screens/HomeScreen';
+import { mockBlobbis } from '@/data/mockBlobbis';
+import { Blobbi } from '@/types/blobbi';
 
-const head = createHead({
-  plugins: [
-    InferSeoMetaPlugin(),
-  ],
-});
-
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      refetchOnWindowFocus: false,
-      staleTime: 60000, // 1 minute
-      gcTime: Infinity,
-    },
-  },
-});
-
-const defaultConfig: AppConfig = {
-  theme: "light",
-  relayMetadata: {
-    relays: [
-      { url: 'wss://relay.ditto.pub', read: true, write: true },
-      { url: 'wss://relay.nostr.band', read: true, write: true },
-      { url: 'wss://relay.damus.io', read: true, write: true },
-    ],
-    updatedAt: 0,
-  },
-};
+type AppState = 'auth' | 'profile-setup' | 'adoption' | 'home';
 
 export function App() {
-  return (
-    <UnheadProvider head={head}>
-      <AppProvider storageKey="nostr:app-config" defaultConfig={defaultConfig}>
-        <QueryClientProvider client={queryClient}>
-          <NostrLoginProvider storageKey='nostr:login'>
-            <NostrProvider>
-              <NostrSync />
-              <NWCProvider>
-                <TooltipProvider>
-                  <Toaster />
-                  <Suspense>
-                    <AppRouter />
-                  </Suspense>
-                </TooltipProvider>
-              </NWCProvider>
-            </NostrProvider>
-          </NostrLoginProvider>
-        </QueryClientProvider>
-      </AppProvider>
-    </UnheadProvider>
-  );
+  const [appState, setAppState] = useState<AppState>('auth');
+  const [userName, setUserName] = useState('');
+  const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
+
+  const handleLogin = () => {
+    setAppState('profile-setup');
+  };
+
+  const handleProfileComplete = (name: string) => {
+    setUserName(name);
+    setAppState('adoption');
+  };
+
+  const handleAdoption = (blobbiName: string) => {
+    // Create a new egg blobbi with the given name
+    const newBlobbi: Blobbi = {
+      ...mockBlobbis[0], // Use the egg template
+      id: `blobbi-${Date.now()}`,
+      name: blobbiName,
+      birthTime: Date.now(),
+      lastInteraction: Date.now(),
+    };
+    
+    // Add all mock blobbis for demo purposes
+    setBlobbis([newBlobbi, ...mockBlobbis.slice(1)]);
+    setAppState('home');
+  };
+
+  const handleLogout = () => {
+    setAppState('auth');
+    setUserName('');
+    setBlobbis([]);
+  };
+
+  // Render the appropriate screen based on app state
+  switch (appState) {
+    case 'auth':
+      return (
+        <>
+          <AuthScreen onLogin={handleLogin} />
+          <Toaster />
+        </>
+      );
+    
+    case 'profile-setup':
+      return (
+        <>
+          <ProfileSetupScreen onComplete={handleProfileComplete} />
+          <Toaster />
+        </>
+      );
+    
+    case 'adoption':
+      return (
+        <>
+          <BlobbiAdoptionScreen onAdopt={handleAdoption} />
+          <Toaster />
+        </>
+      );
+    
+    case 'home':
+      return (
+        <>
+          <HomeScreen 
+            blobbis={blobbis} 
+            userName={userName}
+            onLogout={handleLogout}
+          />
+          <Toaster />
+        </>
+      );
+    
+    default:
+      return null;
+  }
 }
 
 export default App;
