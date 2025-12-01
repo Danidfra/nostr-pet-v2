@@ -16,12 +16,12 @@ This is the UI-only skeleton for the Blobbi virtual pet application. **No Nostr 
   - Divine theme support
   - Temperature-based glow effects
   - Cracking animations
-  
+
 - **BabyGraphic** - Uses SVGs from `src/assets/baby-stage/`
   - Base variant
   - Neon variant (for divine/special blobbis)
   - Sleeping variant
-  
+
 - **AdultGraphic** - Uses SVGs from `src/assets/adult-stage/`
   - 17 evolution forms supported (bloomi, pandi, owli, catti, etc.)
   - Base and sleeping variants for each form
@@ -32,11 +32,17 @@ Located in `src/data/mockBlobbis.ts`:
 - 1 baby Blobbi
 - 1 adult Blobbi (bloomi form)
 
-### ✅ UI Components
-- Stats display with progress bars (Health, Hunger, Happiness, Energy, Hygiene)
-- Action buttons (Feed, Play, Clean, Sleep/Wake, Medicine)
-- Bottom navigation (Shop, Inventory, Camera) - placeholders
-- Blobbi selector (switch between multiple pets)
+### ✅ UI Components - Pou/Talking Tom Style
+- **Room-based layout** with 3 rooms:
+  - My Blobbi/My Blobbies - Main pet care
+  - Growth Hub - Self-improvement activities
+  - Playroom - Fun and games
+- **Room navigation bar** with left/right arrows
+- **Always-centered Blobbi** graphic (changes per life stage)
+- **Contextual footer actions** (change per room and life stage)
+- **Egg incubation panel** with temperature management
+- **Room locking** for eggs (Growth Hub & Playroom unlock after hatching)
+- Blobbi selector for multiple pets (in My Blobbies room)
 - Responsive mobile-friendly layout
 
 ## File Structure
@@ -71,12 +77,26 @@ src/
 
 ## How It Works
 
+### App Flow
 The app uses a simple state machine in `App.tsx`:
 
 1. `auth` → Shows login screen
 2. `profile-setup` → Asks for user name
 3. `adoption` → Let user name their first Blobbi
-4. `home` → Main pet interface with all mock blobbis
+4. `home` → Main pet interface with room navigation
+
+### Room System
+The HomeScreen uses a **Pou/Talking Tom style** single-room layout:
+
+- **Header** - App name, user, settings/shop buttons
+- **Main Area** - Blobbi always centered, room content around it
+- **Room Navigation Bar** - Switch between rooms with arrows
+- **Footer** - Contextual action buttons (change per room)
+
+**3 Rooms:**
+1. **My Blobbi** - Care for your pet (feed, clean, sleep, etc.)
+2. **Growth Hub** - Growth activities (locked for eggs)
+3. **Playroom** - Fun and games (locked for eggs)
 
 All state is managed with React `useState`. No backend, no Nostr, no real persistence.
 
