@@ -380,9 +380,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
       {/* STATUS DRAWER - Collapsible status row */}
       <div className="flex-none">
         {isStatusOpen ? (
-          // Open state: full status row with handle
-          <div className="bg-white/60 dark:bg-slate-900/60 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
-            <div className="w-full max-w-4xl mx-auto px-4 py-2">
+          // Open state: compact floating strip with tab
+          <div className="flex justify-center pt-2 pb-1">
+            <div className="inline-flex flex-col items-center gap-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl shadow-sm px-3 py-2 border border-purple-100/50 dark:border-slate-700/50">
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <StatusCircle
                   icon={Heart}
@@ -410,33 +410,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
                   label="Hygiene"
                 />
               </div>
-              <div className="flex justify-center mt-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsStatusOpen(false)}
-                  className="h-6 px-3 rounded-full text-xs text-muted-foreground hover:bg-muted"
-                >
-                  <ChevronUp className="h-3 w-3 mr-1" />
-                  Hide status
-                </Button>
-              </div>
+              {/* Small tab handle */}
+              <button
+                type="button"
+                onClick={() => setIsStatusOpen(false)}
+                className="mt-1 h-5 w-8 flex items-center justify-center rounded-full bg-muted/80 text-muted-foreground hover:bg-muted transition-colors"
+              >
+                <ChevronUp className="h-3 w-3" />
+              </button>
             </div>
           </div>
         ) : (
-          // Closed state: thin bar with handle
-          <div className="bg-white/40 dark:bg-slate-900/40 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
-            <div className="flex justify-center py-1">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setIsStatusOpen(true)}
-                className="h-6 px-3 rounded-full text-xs text-muted-foreground hover:bg-muted"
-              >
-                <ChevronDown className="h-3 w-3 mr-1" />
-                Show status
-              </Button>
-            </div>
+          // Closed state: small tab only
+          <div className="flex justify-center pt-1 pb-1">
+            <button
+              type="button"
+              onClick={() => setIsStatusOpen(true)}
+              className="h-5 w-8 flex items-center justify-center rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm border border-purple-100/50 dark:border-slate-700/50 text-muted-foreground hover:bg-muted/80 transition-colors"
+            >
+              <ChevronDown className="h-3 w-3" />
+            </button>
           </div>
         )}
       </div>
