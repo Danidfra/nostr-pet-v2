@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { cn } from '@/lib/utils';
 import {
   Heart,
@@ -63,6 +64,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(true);
+  const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
+  const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const { toast } = useToast();
 
   const currentBlobbi = blobbis[currentBlobbiIndex];
@@ -348,14 +351,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       <div className="h-full w-full max-w-4xl mx-auto flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-900 dark:via-violet-900 dark:to-slate-950">
         {/* HEADER - Row 1: Logo + Navigation */}
         <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
-          <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
+            {/* Left: Daily missions */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsMissionsModalOpen(true)}
+            >
+              <ClipboardList className="h-5 w-5" />
+            </Button>
 
             {/* Center: Blobbi logo */}
             <div className="flex-shrink-0">
               <img
                 src={BlobbiLogo}
                 alt="Blobbi"
-                className="h-10 sm:h-14 w-auto"
+                className="h-6 w-auto"
               />
             </div>
 
@@ -510,7 +521,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => toast({ title: 'Daily missions', description: 'Daily missions coming soon' })}
+                onClick={() => setIsMissionsModalOpen(true)}
                 className="rounded-full h-12 w-12"
               >
                 <ClipboardList className="h-5 w-5" />
@@ -534,7 +545,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+                onClick={() => {
+                  setIsActionsOpen(false);
+                  setIsInventoryOpen(true);
+                }}
                 className="rounded-full h-12 w-12"
               >
                 <Backpack className="h-5 w-5" />
@@ -556,10 +570,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       </div>
 
       {/* BACKDROP - Semi-transparent overlay */}
-      {isActionsOpen && (
+      {(isActionsOpen || isInventoryOpen) && (
         <div
           className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
-          onClick={() => setIsActionsOpen(false)}
+          onClick={() => {
+            setIsActionsOpen(false);
+            setIsInventoryOpen(false);
+          }}
         />
       )}
 
@@ -584,6 +601,102 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           {renderActions()}
         </div>
       </div>
+
+      {/* INVENTORY SIDEBAR - Slide in from right */}
+      <div
+        className={cn(
+          "fixed inset-y-0 right-0 z-40 w-full max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 border-l border-purple-200 dark:border-slate-700 shadow-2xl transform transition-transform duration-300 ease-in-out",
+          isInventoryOpen ? "translate-x-0" : "translate-x-full"
+        )}
+      >
+        {/* Inventory header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
+          <h2 className="text-sm font-semibold">Inventory</h2>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsInventoryOpen(false)}
+            className="h-8 w-8 rounded-full"
+          >
+            <X className="h-4 w-4" />
+          </Button>
+        </div>
+
+        {/* Inventory content */}
+        <div className="h-full flex flex-col">
+          <div className="flex-1 flex flex-col">
+            <Tabs defaultValue="all" className="flex-1 flex flex-col">
+              <TabsList className="grid grid-cols-3 gap-1 px-4 pt-3">
+                <TabsTrigger value="all" className="text-xs">All Items</TabsTrigger>
+                <TabsTrigger value="food" className="text-xs">Food</TabsTrigger>
+                <TabsTrigger value="toys" className="text-xs">Toys</TabsTrigger>
+                <TabsTrigger value="medicine" className="text-xs">Medicine</TabsTrigger>
+                <TabsTrigger value="hygiene" className="text-xs">Hygiene</TabsTrigger>
+                <TabsTrigger value="accessories" className="text-xs col-span-3 sm:col-span-1">
+                  Accessories
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
+                <TabsContent value="all" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    You don&apos;t have any items yet.
+                  </p>
+                </TabsContent>
+                <TabsContent value="food" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    No food items yet.
+                  </p>
+                </TabsContent>
+                <TabsContent value="toys" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    No toys yet.
+                  </p>
+                </TabsContent>
+                <TabsContent value="medicine" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    No medicine items yet.
+                  </p>
+                </TabsContent>
+                <TabsContent value="hygiene" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    No hygiene items yet.
+                  </p>
+                </TabsContent>
+                <TabsContent value="accessories" className="mt-0">
+                  <p className="text-sm text-muted-foreground">
+                    No accessories yet.
+                  </p>
+                </TabsContent>
+              </div>
+            </Tabs>
+          </div>
+        </div>
+      </div>
+
+      {/* MISSIONS MODAL */}
+      <Dialog open={isMissionsModalOpen} onOpenChange={setIsMissionsModalOpen}>
+        <DialogContent className="sm:max-w-md w-[90vw]">
+          <DialogHeader>
+            <DialogTitle>Daily Missions</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {/* Placeholder content for now */}
+            <div className="p-3 rounded-lg bg-muted flex items-center justify-between">
+              <span className="text-sm font-medium">Feed your Blobbi 3 times</span>
+              <span className="text-xs text-muted-foreground">0 / 3</span>
+            </div>
+            <div className="p-3 rounded-lg bg-muted flex items-center justify-between">
+              <span className="text-sm font-medium">Play in the Playroom</span>
+              <span className="text-xs text-muted-foreground">Not started</span>
+            </div>
+            <div className="p-3 rounded-lg bg-muted flex items-center justify-between">
+              <span className="text-sm font-medium">Keep your Blobbi happy</span>
+              <span className="text-xs text-muted-foreground">In progress</span>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* TASKS MODAL */}
       <Dialog open={isTasksModalOpen} onOpenChange={setIsTasksModalOpen}>
