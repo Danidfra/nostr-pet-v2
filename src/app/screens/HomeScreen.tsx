@@ -43,7 +43,6 @@ import {
   ShoppingCart,
   X,
   ClipboardList,
-  Users,
   Bell,
 } from 'lucide-react';
 import { useToast } from '@/hooks/useToast';
@@ -60,9 +59,9 @@ type Room = 'MY_BLOBBI' | 'GROWTH_HUB' | 'PLAYROOM';
 
 const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLogout }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => {
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
-  const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
+  const [currentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(true);
@@ -121,9 +120,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
     setIsTasksModalOpen(true);
   };
 
-  const cycleBlobbi = () => {
-    setCurrentBlobbiIndex((prev) => (prev + 1) % blobbis.length);
-  };
+
 
   // Get room title
   const getRoomTitle = () => {
@@ -381,7 +378,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
               >
                 <Bell className="h-5 w-5" />
               </Button>
-              
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="ghost" size="icon">
@@ -468,7 +465,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         )}
       </div>
 
-      {/* MAIN AREA - ONLY Blobbi graphic centered */}
+      {/* MAIN AREA - Blobbi graphic + room-specific content */}
       <main className="flex-1 flex items-start justify-center relative overflow-hidden pt-4">
         {isRoomLocked() ? (
           // Locked room for eggs
@@ -480,7 +477,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
             </p>
           </div>
         ) : (
-          <div className="flex flex-col items-center">
+          <div className="flex flex-col items-center w-full max-w-md px-4">
             {/* Blobbi name and small badges */}
             <div className="mb-2 text-center">
               <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-slate-100">{currentBlobbi.name}</h2>
@@ -500,6 +497,56 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
             <div className="scale-125">
               {renderBlobbiGraphic()}
             </div>
+
+            {/* Room-specific quick actions */}
+            <div className="mt-6 w-full">
+              {currentRoom === 'GROWTH_HUB' && (
+                <div className="space-y-3">
+                  <Button
+                    onClick={handleGrowthAction}
+                    className="w-full h-12 bg-gradient-to-br from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600"
+                  >
+                    <Target className="h-5 w-5 mr-2" />
+                    {getGrowthActionLabel()}
+                  </Button>
+                  <Button
+                    onClick={openTasksModal}
+                    variant="outline"
+                    className="w-full h-12"
+                  >
+                    <ClipboardList className="h-5 w-5 mr-2" />
+                    View growth tasks
+                  </Button>
+                </div>
+              )}
+
+              {currentRoom === 'PLAYROOM' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <Button
+                    onClick={() => handleAction('Started a game')}
+                    className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-emerald-500 hover:from-green-600 hover:to-emerald-600"
+                  >
+                    <Zap className="h-5 w-5" />
+                    <span className="text-xs">Games</span>
+                  </Button>
+                  <Button
+                    onClick={() => handleAction('Played with toys')}
+                    className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
+                  >
+                    <Gamepad2 className="h-5 w-5" />
+                    <span className="text-xs">Toys</span>
+                  </Button>
+                </div>
+              )}
+
+              {currentRoom === 'MY_BLOBBI' && (
+                <div className="text-center">
+                  <p className="text-sm text-muted-foreground">
+                    Use the Actions button below to take care of your Blobbi
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>
@@ -513,7 +560,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
         </div>
       </div>
 
-      {/* FOOTER - Per-room navigation with arrows */}
+      {/* FOOTER - Fixed 3-button navigation with arrows */}
       <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left Arrow */}
@@ -526,137 +573,44 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
             <ChevronLeft className="h-5 w-5" />
           </Button>
 
-          {/* Per-room icon buttons */}
+          {/* Fixed 3-button center layout */}
           <div className="flex items-center justify-around flex-1 gap-2">
-          {currentRoom === 'MY_BLOBBI' && (
-            <>
-              {/* Camera */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Camera className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Camera</span>
-              </div>
+            {/* Inventory */}
+            <div className="flex flex-col items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
+                className="rounded-full h-12 w-12"
+              >
+                <Backpack className="h-5 w-5" />
+              </Button>
+              <span className="text-xs text-muted-foreground">Inventory</span>
+            </div>
 
-              {/* Actions */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  onClick={() => setIsActionsOpen(!isActionsOpen)}
-                  className="rounded-full h-12 w-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
-                >
-                  <Sparkles className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Actions</span>
-              </div>
+            {/* Actions */}
+            <div className="flex flex-col items-center gap-1">
+              <Button
+                onClick={() => setIsActionsOpen(!isActionsOpen)}
+                className="rounded-full h-12 w-12 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
+              >
+                <Sparkles className="h-5 w-5" />
+              </Button>
+              <span className="text-xs text-muted-foreground">Actions</span>
+            </div>
 
-              {/* Backpack */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Backpack className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Inventory</span>
-              </div>
-            </>
-          )}
-
-          {currentRoom === 'GROWTH_HUB' && (
-            <>
-              {/* Tasks */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={openTasksModal}
-                  className="rounded-full h-12 w-12"
-                >
-                  <ClipboardList className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Tasks</span>
-              </div>
-
-              {/* Start Incubation/Evolution */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  onClick={handleGrowthAction}
-                  className="rounded-full h-12 w-12 bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
-                >
-                  <Target className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  {isEgg ? 'Incubate' : isBaby ? 'Evolve' : 'Evolved'}
-                </span>
-              </div>
-
-              {/* Blobbi selector */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={cycleBlobbi}
-                  disabled={!hasMultipleBlobbis}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Users className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">
-                  Blobbi {hasMultipleBlobbis && `${currentBlobbiIndex + 1}/${blobbis.length}`}
-                </span>
-              </div>
-            </>
-          )}
-
-          {currentRoom === 'PLAYROOM' && (
-            <>
-              {/* Games */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleAction('Started a game')}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Zap className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Games</span>
-              </div>
-
-              {/* Toys */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handleAction('Played with toys')}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Gamepad2 className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Toys</span>
-              </div>
-
-              {/* Backpack */}
-              <div className="flex flex-col items-center gap-1">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => toast({ title: 'Inventory', description: 'Inventory is not implemented yet' })}
-                  className="rounded-full h-12 w-12"
-                >
-                  <Backpack className="h-5 w-5" />
-                </Button>
-                <span className="text-xs text-muted-foreground">Inventory</span>
-              </div>
-            </>
-          )}
+            {/* Camera */}
+            <div className="flex flex-col items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => toast({ title: 'Camera', description: 'Photo mode is not implemented yet' })}
+                className="rounded-full h-12 w-12"
+              >
+                <Camera className="h-5 w-5" />
+              </Button>
+              <span className="text-xs text-muted-foreground">Camera</span>
+            </div>
           </div>
 
           {/* Right Arrow */}
