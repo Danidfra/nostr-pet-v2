@@ -340,16 +340,18 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
 
   return (
     <div
-      className="h-screen flex flex-col overflow-hidden"
+      className="h-screen w-full overflow-hidden"
       style={{
         backgroundImage: `url(${BlobbiBackground})`,
         backgroundRepeat: 'repeat',
         backgroundSize: '120px 120px',
       }}
     >
-      {/* HEADER - Row 1: Logo + Menu */}
-      <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
-        <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      {/* Centered app shell */}
+      <div className="h-full w-full max-w-4xl mx-auto flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-900 dark:via-violet-900 dark:to-slate-950">
+        {/* HEADER - Row 1: Logo + Menu */}
+        <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
+          <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left: App name and user */}
           <div className="flex-shrink-0">
             <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
@@ -728,6 +730,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, userName, onLog
           </div>
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 };
