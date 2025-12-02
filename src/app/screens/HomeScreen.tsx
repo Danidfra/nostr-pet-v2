@@ -448,6 +448,21 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
         )}
       </div>
 
+      {/* Blobbi name and small badges */}
+      <div className="flex-none mb-2 text-center px-4">
+        <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-slate-100">{currentBlobbi.name}</h2>
+        <div className="flex justify-center gap-2">
+          <Badge variant="secondary" className="capitalize text-xs">
+            {currentBlobbi.lifeStage}
+          </Badge>
+          {currentBlobbi.evolutionForm && (
+            <Badge variant="outline" className="capitalize text-xs">
+              {currentBlobbi.evolutionForm}
+            </Badge>
+          )}
+        </div>
+      </div>
+
       {/* MAIN AREA - Blobbi graphic + room-specific content */}
       <main className="flex-1 flex items-center justify-center relative overflow-hidden">
         {isRoomLocked() ? (
@@ -461,21 +476,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           </div>
         ) : (
           <div className="flex flex-col items-center w-full max-w-md px-4">
-            {/* Blobbi name and small badges */}
-            <div className="mb-2 text-center">
-              <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-slate-100">{currentBlobbi.name}</h2>
-              <div className="flex justify-center gap-2">
-                <Badge variant="secondary" className="capitalize text-xs">
-                  {currentBlobbi.lifeStage}
-                </Badge>
-                {currentBlobbi.evolutionForm && (
-                  <Badge variant="outline" className="capitalize text-xs">
-                    {currentBlobbi.evolutionForm}
-                  </Badge>
-                )}
-              </div>
-            </div>
-
             {/* Blobbi graphic */}
             <div className="scale-125">
               {renderBlobbiGraphic()}
