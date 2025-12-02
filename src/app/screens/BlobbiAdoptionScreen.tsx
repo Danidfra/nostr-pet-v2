@@ -48,10 +48,10 @@ export const BlobbiAdoptionScreen: React.FC<BlobbiAdoptionScreenProps> = ({ onAd
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-pink-100 via-purple-100 to-blue-100 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] p-4">
       <Card className="w-full max-w-lg shadow-2xl">
         <CardHeader className="text-center space-y-2">
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 dark:from-pink-400 dark:to-purple-400 bg-clip-text text-transparent">
             Adopt Your First Blobbi
           </CardTitle>
           <CardDescription className="text-base">
@@ -62,7 +62,7 @@ export const BlobbiAdoptionScreen: React.FC<BlobbiAdoptionScreenProps> = ({ onAd
           <div className="flex justify-center py-4">
             <EggGraphic blobbi={previewEgg} animated={true} />
           </div>
-          
+
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
               <Label htmlFor="blobbiName" className="text-base">Name Your Blobbi</Label>
@@ -79,8 +79,8 @@ export const BlobbiAdoptionScreen: React.FC<BlobbiAdoptionScreenProps> = ({ onAd
                 Choose a name that represents your new companion's unique personality
               </p>
             </div>
-            
-            <Button 
+
+            <Button
               type="submit"
               className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-pink-600 to-purple-600 hover:from-pink-700 hover:to-purple-700"
               disabled={!blobbiName.trim()}

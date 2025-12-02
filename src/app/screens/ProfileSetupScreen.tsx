@@ -19,7 +19,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-100 via-purple-100 to-pink-100 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <div className="text-6xl mb-4">👤</div>
@@ -42,7 +42,7 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
                 required
               />
             </div>
-            <Button 
+            <Button
               type="submit"
               className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               disabled={!name.trim()}

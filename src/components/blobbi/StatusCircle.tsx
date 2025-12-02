@@ -24,11 +24,23 @@ export const StatusCircle: React.FC<StatusCircleProps> = ({
   // Clamp value between 0 and 100
   const clampedValue = Math.max(0, Math.min(100, value));
 
-  // Determine color based on thresholds
+  // Determine color based on thresholds with dark mode support
   const getColor = () => {
-    if (clampedValue < 20) return { ring: '#ef4444', bg: '#fee2e2' }; // red
-    if (clampedValue < 60) return { ring: '#eab308', bg: '#fef9c3' }; // yellow
-    return { ring: '#22c55e', bg: '#dcfce7' }; // green
+    if (clampedValue < 20) return {
+      ring: '#ef4444',
+      bgLight: '#fee2e2',
+      bgDark: '#7f1d1d'
+    }; // red
+    if (clampedValue < 60) return {
+      ring: '#eab308',
+      bgLight: '#fef9c3',
+      bgDark: '#713f12'
+    }; // yellow
+    return {
+      ring: '#22c55e',
+      bgLight: '#dcfce7',
+      bgDark: '#14532d'
+    }; // green
   };
 
   const colors = getColor();
@@ -37,12 +49,23 @@ export const StatusCircle: React.FC<StatusCircleProps> = ({
   // At 100%, we want a full circle. At 0%, we want empty.
   // The gradient starts at top (0deg) and fills clockwise
   const percentage = clampedValue;
-  const gradientStyle = {
+
+  // Use CSS variables for dark mode support
+  const gradientStyleLight = {
     background: `conic-gradient(
       ${colors.ring} 0deg,
       ${colors.ring} ${percentage * 3.6}deg,
-      ${colors.bg} ${percentage * 3.6}deg,
-      ${colors.bg} 360deg
+      ${colors.bgLight} ${percentage * 3.6}deg,
+      ${colors.bgLight} 360deg
+    )`,
+  };
+
+  const gradientStyleDark = {
+    background: `conic-gradient(
+      ${colors.ring} 0deg,
+      ${colors.ring} ${percentage * 3.6}deg,
+      ${colors.bgDark} ${percentage * 3.6}deg,
+      ${colors.bgDark} 360deg
     )`,
   };
 
@@ -56,13 +79,24 @@ export const StatusCircle: React.FC<StatusCircleProps> = ({
               className
             )}
           >
-            {/* Outer ring with conic gradient */}
+            {/* Outer ring with conic gradient - light mode */}
             <div
-              className="rounded-full p-1"
-              style={gradientStyle}
+              className="rounded-full p-1 dark:hidden"
+              style={gradientStyleLight}
             >
               {/* Inner circle with icon */}
               <div className="bg-white rounded-full w-10 h-10 flex items-center justify-center">
+                <Icon className="h-5 w-5" style={{ color: colors.ring }} />
+              </div>
+            </div>
+
+            {/* Outer ring with conic gradient - dark mode */}
+            <div
+              className="rounded-full p-1 hidden dark:block"
+              style={gradientStyleDark}
+            >
+              {/* Inner circle with icon */}
+              <div className="bg-slate-800 rounded-full w-10 h-10 flex items-center justify-center">
                 <Icon className="h-5 w-5" style={{ color: colors.ring }} />
               </div>
             </div>

@@ -11,7 +11,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   Dialog,
   DialogContent,
@@ -161,7 +163,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
     if (isRoomLocked()) {
       return (
         <div className="text-center py-6">
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground dark:text-[hsl(250,10%,65%)]">
             Room locked until your Blobbi hatches
           </p>
         </div>
@@ -340,17 +342,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
 
   return (
     <div
-      className="h-screen w-full overflow-hidden"
+      className="h-screen w-full overflow-hidden relative"
       style={{
         backgroundImage: `url(${BlobbiBackground})`,
         backgroundRepeat: 'repeat',
         backgroundSize: '120px 120px',
       }}
     >
+      {/* Dark mode overlay for background pattern */}
+      <div className="absolute inset-0 bg-slate-950/40 dark:block hidden pointer-events-none" />
+
       {/* Centered app shell */}
-      <div className="h-full w-full max-w-4xl mx-auto flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-slate-900 dark:via-violet-900 dark:to-slate-950">
+      <div className="h-full w-full max-w-4xl mx-auto flex flex-col bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] relative z-10">
         {/* HEADER - Row 1: Logo + Navigation */}
-        <header className="flex-none bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-purple-100 dark:border-slate-700">
+        <header className="flex-none bg-white/90 dark:bg-[hsl(250,30%,12%)]/90 backdrop-blur-sm border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
           <div className="w-full max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
 
             {/* Center: Blobbi logo */}
@@ -362,30 +367,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               />
             </div>
 
-            {/* Right: Menu */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <Menu className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
-                  <ShoppingCart className="mr-2 h-4 w-4" />
-                  Shop
-                </DropdownMenuItem>
-                {onLogout && (
-                  <DropdownMenuItem onClick={onLogout}>
-                    <LogOut className="mr-2 h-4 w-4" />
-                    Logout
+            {/* Right: Theme Toggle + Menu */}
+            <div className="flex items-center gap-1">
+              <ThemeToggle />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <Menu className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    Shop
+                  </DropdownMenuItem>
+                  {onLogout && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={onLogout}>
+                        <LogOut className="mr-2 h-4 w-4" />
+                        Logout
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </header>
 
@@ -394,7 +405,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
         {isStatusOpen ? (
           // Open state: compact floating strip with tab
           <div className="flex justify-center pt-2 pb-1">
-            <div className="inline-flex flex-col items-center gap-1 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm rounded-2xl shadow-sm px-3 py-2 border border-purple-100/50 dark:border-slate-700/50">
+            <div className="inline-flex flex-col items-center gap-1 bg-white/90 dark:bg-[hsl(250,30%,12%)]/90 backdrop-blur-sm rounded-2xl shadow-sm px-3 py-2 border border-purple-100/50 dark:border-[hsl(250,25%,22%)]/50">
               <div className="flex items-center justify-center gap-2 flex-wrap">
                 <StatusCircle
                   icon={Heart}
@@ -426,7 +437,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               <button
                 type="button"
                 onClick={() => setIsStatusOpen(false)}
-                className="mt-1 inline-flex items-center gap-1 h-5 px-3 rounded-full bg-muted/80 text-muted-foreground hover:bg-muted transition-colors text-[10px]"
+                className="mt-1 inline-flex items-center gap-1 h-5 px-3 rounded-full bg-muted/80 dark:bg-[hsl(250,25%,18%)]/80 text-muted-foreground dark:text-[hsl(250,10%,65%)] hover:bg-muted dark:hover:bg-[hsl(250,25%,18%)] transition-colors text-[10px]"
               >
                 <ChevronUp className="h-3 w-3" />
                 <span>Hide status</span>
@@ -439,7 +450,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
             <button
               type="button"
               onClick={() => setIsStatusOpen(true)}
-              className="inline-flex items-center gap-1 h-5 px-3 rounded-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm shadow-sm border border-purple-100/50 dark:border-slate-700/50 text-muted-foreground hover:bg-muted/80 transition-colors text-[10px]"
+              className="inline-flex items-center gap-1 h-5 px-3 rounded-full bg-white/90 dark:bg-[hsl(250,30%,12%)]/90 backdrop-blur-sm shadow-sm border border-purple-100/50 dark:border-[hsl(250,25%,22%)]/50 text-muted-foreground dark:text-[hsl(250,10%,65%)] hover:bg-muted/80 dark:hover:bg-[hsl(250,25%,18%)]/80 transition-colors text-[10px]"
             >
               <ChevronDown className="h-3 w-3" />
               <span>Show status</span>
@@ -450,7 +461,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
 
       {/* Blobbi name and small badges */}
       <div className="flex-none mb-2 text-center px-4">
-        <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-slate-100">{currentBlobbi.name}</h2>
+        <h2 className="text-2xl font-bold mb-1 text-slate-900 dark:text-[hsl(250,15%,95%)]">{currentBlobbi.name}</h2>
         <div className="flex justify-center gap-2">
           <Badge variant="secondary" className="capitalize text-xs">
             {currentBlobbi.lifeStage}
@@ -469,8 +480,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           // Locked room for eggs
           <div className="text-center space-y-4">
             <div className="text-6xl mb-4">🔒</div>
-            <h3 className="text-xl font-semibold">Room Locked</h3>
-            <p className="text-muted-foreground">
+            <h3 className="text-xl font-semibold text-slate-900 dark:text-[hsl(250,15%,95%)]">Room Locked</h3>
+            <p className="text-muted-foreground dark:text-[hsl(250,10%,65%)]">
               This room will unlock when your Blobbi hatches!
             </p>
           </div>
@@ -487,14 +498,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       {/* ROOM TITLE ROW */}
       <div className="flex-none">
         <div className="w-full max-w-4xl mx-auto px-4 py-2">
-          <h2 className="text-lg font-semibold text-center text-slate-900 dark:text-slate-100">
+          <h2 className="text-lg font-semibold text-center text-slate-900 dark:text-[hsl(250,15%,95%)]">
             {getRoomTitle()}
           </h2>
         </div>
       </div>
 
       {/* FOOTER - Fixed 3-button navigation with arrows */}
-      <div className="flex-none bg-white dark:bg-slate-900 border-t-2 border-purple-200 dark:border-slate-700">
+      <div className="flex-none bg-white dark:bg-[hsl(250,30%,12%)] border-t-2 border-purple-200 dark:border-[hsl(250,25%,22%)]">
         <div className="w-full max-w-md mx-auto px-4 py-3 flex items-center justify-between">
           {/* Left Arrow */}
           <Button
@@ -564,7 +575,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       {/* BACKDROP - Semi-transparent overlay for Actions drawer */}
       {isActionsOpen && (
         <div
-          className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
+          className="fixed inset-0 bg-black/50 dark:bg-black/70 z-30 transition-opacity duration-300 ease-in-out"
           onClick={() => setIsActionsOpen(false)}
         />
       )}
@@ -576,7 +587,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           isActionsOpen ? "translate-y-0" : "translate-y-full"
         )}
       >
-        <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t-2 border-purple-200 dark:border-slate-700 rounded-t-2xl shadow-2xl pt-10 pb-6 px-8 relative">
+        <div className="bg-white/95 dark:bg-[hsl(250,30%,12%)]/95 backdrop-blur-sm border-t-2 border-purple-200 dark:border-[hsl(250,25%,22%)] rounded-t-2xl shadow-2xl pt-10 pb-6 px-8 relative">
           {/* Close button */}
           <Button
             variant="ghost"
@@ -595,8 +606,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
         <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] h-auto flex flex-col p-0 rounded-2xl sm:w-full sm:max-w-3xl sm:max-h-[80vh]">
           {/* Inventory header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
-            <h2 className="text-sm font-semibold">Inventory</h2>
+          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-[hsl(250,15%,95%)]">Inventory</h2>
           </div>
 
           {/* Inventory content */}

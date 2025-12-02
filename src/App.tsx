@@ -1,4 +1,8 @@
 import { useState } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { createHead, UnheadProvider } from '@unhead/react/client';
+import { AppProvider } from '@/components/AppProvider';
+import { AppConfig } from '@/contexts/AppContext';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthScreen } from '@/app/screens/AuthScreen';
 import { ProfileSetupScreen } from '@/app/screens/ProfileSetupScreen';
@@ -9,7 +13,27 @@ import { Blobbi } from '@/types/blobbi';
 
 type AppState = 'auth' | 'profile-setup' | 'adoption' | 'home';
 
-export function App() {
+const head = createHead();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1 },
+    mutations: { retry: 0 },
+  },
+});
+
+const defaultConfig: AppConfig = {
+  theme: 'system',
+  relayMetadata: {
+    relays: [
+      { url: 'wss://relay.ditto.pub', read: true, write: true },
+      { url: 'wss://relay.nostr.band', read: true, write: true },
+      { url: 'wss://relay.damus.io', read: true, write: true },
+    ],
+    updatedAt: 0,
+  },
+};
+
+function BlobbiApp() {
   const [appState, setAppState] = useState<AppState>('auth');
   const [userName, setUserName] = useState('');
   const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
@@ -32,7 +56,7 @@ export function App() {
       birthTime: Date.now(),
       lastInteraction: Date.now(),
     };
-    
+
     // Add all mock blobbis for demo purposes
     setBlobbis([newBlobbi, ...mockBlobbis.slice(1)]);
     setAppState('home');
@@ -53,7 +77,7 @@ export function App() {
           <Toaster />
         </>
       );
-    
+
     case 'profile-setup':
       return (
         <>
@@ -61,7 +85,7 @@ export function App() {
           <Toaster />
         </>
       );
-    
+
     case 'adoption':
       return (
         <>
@@ -69,22 +93,34 @@ export function App() {
           <Toaster />
         </>
       );
-    
+
     case 'home':
       return (
         <>
-          <HomeScreen 
-            blobbis={blobbis} 
+          <HomeScreen
+            blobbis={blobbis}
             userName={userName}
             onLogout={handleLogout}
           />
           <Toaster />
         </>
       );
-    
+
     default:
       return null;
   }
+}
+
+export function App() {
+  return (
+    <UnheadProvider head={head}>
+      <AppProvider storageKey='blobbi-app-config' defaultConfig={defaultConfig}>
+        <QueryClientProvider client={queryClient}>
+          <BlobbiApp />
+        </QueryClientProvider>
+      </AppProvider>
+    </UnheadProvider>
+  );
 }
 
 export default App;

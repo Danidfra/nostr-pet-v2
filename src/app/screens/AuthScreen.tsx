@@ -8,11 +8,11 @@ interface AuthScreenProps {
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] p-4">
       <Card className="w-full max-w-md shadow-2xl">
         <CardHeader className="text-center space-y-2">
           <div className="text-6xl mb-4">🥚</div>
-          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+          <CardTitle className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-400 dark:to-pink-400 bg-clip-text text-transparent">
             Welcome to Blobbi
           </CardTitle>
           <CardDescription className="text-base">
@@ -23,7 +23,7 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLogin }) => {
           <p className="text-center text-muted-foreground">
             Adopt, nurture, and watch your Blobbi grow from egg to adult.
           </p>
-          <Button 
+          <Button
             onClick={onLogin}
             className="w-full h-12 text-lg font-semibold bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700"
           >
