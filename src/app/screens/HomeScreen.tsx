@@ -561,14 +561,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
         </div>
       </div>
 
-      {/* BACKDROP - Semi-transparent overlay */}
-      {(isActionsOpen || isInventoryOpen) && (
+      {/* BACKDROP - Semi-transparent overlay for Actions drawer */}
+      {isActionsOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 transition-opacity duration-300 ease-in-out"
-          onClick={() => {
-            setIsActionsOpen(false);
-            setIsInventoryOpen(false);
-          }}
+          onClick={() => setIsActionsOpen(false)}
         />
       )}
 
@@ -594,37 +591,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
         </div>
       </div>
 
-      {/* INVENTORY SIDEBAR - Slide in from right */}
-      <div
-        className={cn(
-          "fixed inset-y-0 right-0 z-40 w-full max-w-xs sm:max-w-sm bg-white dark:bg-slate-900 border-l border-purple-200 dark:border-slate-700 shadow-2xl transform transition-transform duration-300 ease-in-out",
-          isInventoryOpen ? "translate-x-0" : "translate-x-full"
-        )}
-      >
-        {/* Inventory header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
-          <h2 className="text-sm font-semibold">Inventory</h2>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsInventoryOpen(false)}
-            className="h-8 w-8 rounded-full"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
+      {/* INVENTORY MODAL */}
+      <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
+        <DialogContent className="w-full max-w-4xl h-[90vh] flex flex-col p-0">
+          {/* Inventory header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
+            <h2 className="text-sm font-semibold">Inventory</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsInventoryOpen(false)}
+              className="h-8 w-8 rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
 
-        {/* Inventory content */}
-        <div className="h-full flex flex-col">
-          <div className="flex-1 flex flex-col">
+          {/* Inventory content */}
+          <div className="flex-1 flex flex-col overflow-hidden">
             <Tabs defaultValue="all" className="flex-1 flex flex-col">
-              <TabsList className="grid grid-cols-3 gap-1 px-4 pt-3">
-                <TabsTrigger value="all" className="text-xs">All Items</TabsTrigger>
-                <TabsTrigger value="food" className="text-xs">Food</TabsTrigger>
-                <TabsTrigger value="toys" className="text-xs">Toys</TabsTrigger>
-                <TabsTrigger value="medicine" className="text-xs">Medicine</TabsTrigger>
-                <TabsTrigger value="hygiene" className="text-xs">Hygiene</TabsTrigger>
-                <TabsTrigger value="accessories" className="text-xs col-span-3 sm:col-span-1">
+              <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto scrollbar-none">
+                <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                  All Items
+                </TabsTrigger>
+                <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                  Food
+                </TabsTrigger>
+                <TabsTrigger value="toys" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                  Toys
+                </TabsTrigger>
+                <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                  Medicine
+                </TabsTrigger>
+                <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                  Hygiene
+                </TabsTrigger>
+                <TabsTrigger value="accessories" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   Accessories
                 </TabsTrigger>
               </TabsList>
@@ -663,8 +665,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
               </div>
             </Tabs>
           </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
       {/* MISSIONS MODAL */}
       <Dialog open={isMissionsModalOpen} onOpenChange={setIsMissionsModalOpen}>
