@@ -597,14 +597,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           {/* Inventory header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
             <h2 className="text-sm font-semibold">Inventory</h2>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsInventoryOpen(false)}
-              className="h-8 w-8 rounded-full"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
 
           {/* Inventory content */}
