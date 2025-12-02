@@ -608,7 +608,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
           </div>
 
           {/* Inventory content */}
-          <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden pb-10">
             <Tabs defaultValue="all" className="flex-1 flex flex-col">
               <TabsList className="flex flex-wrap gap-2 px-4 pt-3">
                 <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
@@ -631,38 +631,36 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
                 </TabsTrigger>
               </TabsList>
 
-              <div className="flex-1 overflow-y-auto px-4 py-3 space-y-2">
-                <TabsContent value="all" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    You don&apos;t have any items yet.
-                  </p>
-                </TabsContent>
-                <TabsContent value="food" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No food items yet.
-                  </p>
-                </TabsContent>
-                <TabsContent value="toys" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No toys yet.
-                  </p>
-                </TabsContent>
-                <TabsContent value="medicine" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No medicine items yet.
-                  </p>
-                </TabsContent>
-                <TabsContent value="hygiene" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No hygiene items yet.
-                  </p>
-                </TabsContent>
-                <TabsContent value="accessories" className="mt-0">
-                  <p className="text-sm text-muted-foreground">
-                    No accessories yet.
-                  </p>
-                </TabsContent>
-              </div>
+              <TabsContent value="all" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  You don&apos;t have any items yet.
+                </p>
+              </TabsContent>
+              <TabsContent value="food" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  No food items yet.
+                </p>
+              </TabsContent>
+              <TabsContent value="toys" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  No toys yet.
+                </p>
+              </TabsContent>
+              <TabsContent value="medicine" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  No medicine items yet.
+                </p>
+              </TabsContent>
+              <TabsContent value="hygiene" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  No hygiene items yet.
+                </p>
+              </TabsContent>
+              <TabsContent value="accessories" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <p className="text-sm text-muted-foreground">
+                  No accessories yet.
+                </p>
+              </TabsContent>
             </Tabs>
           </div>
         </DialogContent>
