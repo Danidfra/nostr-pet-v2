@@ -449,7 +449,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
       </div>
 
       {/* MAIN AREA - Blobbi graphic + room-specific content */}
-      <main className="flex-1 flex items-start justify-center relative overflow-hidden pt-4">
+      <main className="flex-1 flex items-center justify-center relative overflow-hidden">
         {isRoomLocked() ? (
           // Locked room for eggs
           <div className="text-center space-y-4">
