@@ -16,8 +16,6 @@ import type {
   MutationResult,
   SubscriptionListener
 } from '../core/types';
-import type { NostrTag } from '../core/tags';
-import { isBlobbiKind } from '../core/kinds';
 
 /**
  * Local Result type to avoid circular dependency
@@ -88,7 +86,7 @@ export class NostrClient {
    * Build a Nostr filter from a BlobbiFilter
    */
   private buildFilter(filter: BlobbiFilter): NostrFilter[] {
-    const nostrFilter: Record<string, any> = {};
+    const nostrFilter: Record<string, string | number | string[] | number[]> = {};
 
     // Handle authors
     if (filter.author) {
@@ -154,14 +152,11 @@ export class NostrClient {
 
       const events = await this.nostr.query(nostrFilter, { signal });
 
-      // Filter to only Blobbi events (for safety)
-      const blobbiEvents = events.filter(event => isBlobbiKind(event.kind));
-
       if (this.config.debug) {
-        console.log(`[NostrClient] Query returned ${events.length} events (${blobbiEvents.length} Blobbi events)`);
+        console.log(`[NostrClient] Query returned ${events.length} events`);
       }
 
-      return localOk(blobbiEvents);
+      return localOk(events);
     } catch (error) {
       const err = error instanceof Error ? error : new Error('Unknown query error');
       if (this.config.debug) {
@@ -237,13 +232,8 @@ export class NostrClient {
       }
 
       // Validate event structure
-      if (!event.kind || !event.pubkey || !event.content || !Array.isArray(event.tags)) {
+      if (!event.kind || !event.pubkey || event.content === undefined || !Array.isArray(event.tags)) {
         return localErr(new Error('Invalid event structure'));
-      }
-
-      // Must be a Blobbi event
-      if (!isBlobbiKind(event.kind)) {
-        return localErr(new Error(`Invalid event kind: ${event.kind}`));
       }
 
       const eventId = await this.nostr.event(event);
@@ -305,12 +295,10 @@ export class NostrClient {
         for await (const message of subscription) {
           if (message[0] === 'EVENT') {
             const event = message[2] as NostrEvent;
-            if (isBlobbiKind(event.kind)) {
-              try {
-                listener(event);
-              } catch (error) {
-                console.error('[NostrClient] Subscription listener error:', error);
-              }
+            try {
+              listener(event);
+            } catch (error) {
+              console.error('[NostrClient] Subscription listener error:', error);
             }
           }
         }

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHead, UnheadProvider } from '@unhead/react/client';
 import { AppProvider } from '@/components/AppProvider';
+import NostrProvider from '@/components/NostrProvider';
 import { AppConfig } from '@/contexts/AppContext';
 import { Toaster } from "@/components/ui/toaster";
 import { AuthScreen } from '@/app/screens/AuthScreen';
@@ -10,6 +11,10 @@ import { BlobbiAdoptionScreen } from '@/app/screens/BlobbiAdoptionScreen';
 import { HomeScreen } from '@/app/screens/HomeScreen';
 import { mockBlobbis } from '@/data/mockBlobbis';
 import { Blobbi } from '@/types/blobbi';
+import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
+import { useCurrentUserBlobbonautProfile } from '@/hooks/nostr-pet/useBlobbonautProfile';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
 
 type AppState = 'auth' | 'profile-setup' | 'adoption' | 'home';
 
@@ -33,18 +38,36 @@ const defaultConfig: AppConfig = {
   },
 };
 
-function BlobbiApp() {
+function BlobbiAppInner() {
+  const { isLoggedIn, isInitialized, logout: authLogout } = useNostrAuth();
+  const { hasProfile, profile, isInitialLoading } = useCurrentUserBlobbonautProfile();
+
   const [appState, setAppState] = useState<AppState>('auth');
-  const [userName, setUserName] = useState('');
   const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
 
-  const handleLogin = () => {
-    setAppState('profile-setup');
+  // Determine app state based on auth and profile status
+  useEffect(() => {
+    if (!isInitialized) {
+      return; // Wait for auth to initialize
+    }
+
+    if (!isLoggedIn) {
+      setAppState('auth');
+    } else if (!hasProfile && !isInitialLoading) {
+      setAppState('profile-setup');
+    } else if (hasProfile && blobbis.length === 0) {
+      setAppState('adoption');
+    } else if (hasProfile && blobbis.length > 0) {
+      setAppState('home');
+    }
+  }, [isLoggedIn, hasProfile, isInitialized, isInitialLoading, blobbis.length]);
+
+  const handleLoginSuccess = () => {
+    // State will automatically transition via useEffect
   };
 
-  const handleProfileComplete = (name: string) => {
-    setUserName(name);
-    setAppState('adoption');
+  const handleProfileComplete = () => {
+    // State will automatically transition via useEffect
   };
 
   const handleAdoption = (blobbiName: string) => {
@@ -59,21 +82,37 @@ function BlobbiApp() {
 
     // Add all mock blobbis for demo purposes
     setBlobbis([newBlobbi, ...mockBlobbis.slice(1)]);
-    setAppState('home');
   };
 
-  const handleLogout = () => {
-    setAppState('auth');
-    setUserName('');
+  const handleLogout = async () => {
+    await authLogout();
     setBlobbis([]);
   };
+
+  // Show loading state while initializing
+  if (!isInitialized) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] p-4">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardContent className="py-12 space-y-4">
+            <div className="flex justify-center">
+              <Skeleton className="h-16 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-8 w-3/4 mx-auto" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6 mx-auto" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   // Render the appropriate screen based on app state
   switch (appState) {
     case 'auth':
       return (
         <>
-          <AuthScreen onLogin={handleLogin} />
+          <AuthScreen onLoginSuccess={handleLoginSuccess} />
           <Toaster />
         </>
       );
@@ -99,7 +138,7 @@ function BlobbiApp() {
         <>
           <HomeScreen
             blobbis={blobbis}
-            userName={userName}
+            userName={profile?.name || 'Blobbonaut'}
             onLogout={handleLogout}
           />
           <Toaster />
@@ -116,7 +155,9 @@ export function App() {
     <UnheadProvider head={head}>
       <AppProvider storageKey='blobbi-app-config' defaultConfig={defaultConfig}>
         <QueryClientProvider client={queryClient}>
-          <BlobbiApp />
+          <NostrProvider>
+            <BlobbiAppInner />
+          </NostrProvider>
         </QueryClientProvider>
       </AppProvider>
     </UnheadProvider>

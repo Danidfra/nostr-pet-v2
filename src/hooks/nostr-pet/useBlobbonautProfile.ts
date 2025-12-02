@@ -296,7 +296,7 @@ export const useBlobbonautProfile = (profileId?: string) => {
   }, [updateProfileMutation]);
 
   const createProfile = useCallback((params: Omit<CreateBlobbonautProfileParams, 'ownerPubkey'>) => {
-    if (!user) {
+    if (!user?.pubkey) {
       throw new Error('Must be logged in to create profile');
     }
     return createProfileMutation.mutateAsync({ ...params, ownerPubkey: user.pubkey });
@@ -336,7 +336,6 @@ export const useBlobbonautProfile = (profileId?: string) => {
  * Hook for getting the current user's Blobbonaut profile
  */
 export const useCurrentUserBlobbonautProfile = () => {
-  const { user } = useCurrentUser();
   const result = useBlobbonautProfile(); // No specific profile ID, will query by author
 
   return {
