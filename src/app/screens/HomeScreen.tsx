@@ -593,16 +593,24 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
 
       {/* INVENTORY MODAL */}
       <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
-        <DialogContent className="w-full max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] h-auto flex flex-col p-0 rounded-2xl sm:w-full sm:max-w-3xl sm:max-h-[80vh]">
           {/* Inventory header */}
           <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-slate-700">
             <h2 className="text-sm font-semibold">Inventory</h2>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsInventoryOpen(false)}
+              className="h-8 w-8 rounded-full"
+            >
+              <X className="h-4 w-4" />
+            </Button>
           </div>
 
           {/* Inventory content */}
           <div className="flex-1 flex flex-col overflow-hidden">
             <Tabs defaultValue="all" className="flex-1 flex flex-col">
-              <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto scrollbar-none">
+              <TabsList className="flex flex-wrap gap-2 px-4 pt-3">
                 <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   All Items
                 </TabsTrigger>
