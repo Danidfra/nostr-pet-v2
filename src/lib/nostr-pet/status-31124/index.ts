@@ -58,3 +58,9 @@ export {
   getAverageStats,
   getHealthiest,
 } from './selectors';
+
+// Mappers
+export {
+  mapBlobbiStatusToBlobbi,
+  mapBlobbiStatusListToBlobbis,
+} from './mappers';

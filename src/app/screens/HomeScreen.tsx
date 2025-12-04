@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Blobbi } from '@/types/blobbi';
@@ -6,6 +6,10 @@ import { EggGraphic } from '@/components/blobbi/EggGraphic';
 import { BabyGraphic } from '@/components/blobbi/BabyGraphic';
 import { AdultGraphic } from '@/components/blobbi/AdultGraphic';
 import { StatusCircle } from '@/components/blobbi/StatusCircle';
+import { useMyBlobbis } from '@/hooks/nostr-pet/useBlobbiStatus';
+import { mapBlobbiStatusListToBlobbis } from '@/lib/nostr-pet/status-31124';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -51,8 +55,8 @@ import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 
 interface HomeScreenProps {
-  blobbis: Blobbi[];
-  userName: string;
+  blobbis?: Blobbi[]; // Now optional, will use hook data
+  userName?: string;
   onLogout?: () => void;
 }
 
@@ -60,7 +64,19 @@ type Room = 'MY_BLOBBI' | 'GROWTH_HUB' | 'PLAYROOM';
 
 const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
-export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => {
+export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
+  // Use the Kind 31124 hook to get real Blobbis
+  const { blobbis: blobbiStatusList, isLoading, isInitialLoading, error } = useMyBlobbis();
+
+  // Convert BlobbiStatus to legacy Blobbi type for compatibility
+  const blobbis = useMemo(() => {
+    console.log('[HomeScreen] blobbis from hook:', blobbiStatusList);
+    return mapBlobbiStatusListToBlobbis(blobbiStatusList);
+  }, [blobbiStatusList]);
+
+  console.log('[HomeScreen] mapped blobbis:', blobbis);
+  console.log('[HomeScreen] isLoading:', isLoading);
+  console.log('[HomeScreen] isInitialLoading:', isInitialLoading);
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
   const [currentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
@@ -70,7 +86,114 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ blobbis, onLogout }) => 
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const { toast } = useToast();
 
+  // Loading state
+  if (isInitialLoading) {
+    return (
+      <div
+        className="h-screen w-full overflow-hidden relative flex items-center justify-center"
+        style={{
+          backgroundImage: `url(${BlobbiBackground})`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '120px 120px',
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-950/40 dark:block hidden pointer-events-none" />
+        <Card className="w-full max-w-md shadow-2xl z-10">
+          <CardContent className="py-12 space-y-4">
+            <div className="flex justify-center">
+              <Skeleton className="h-16 w-16 rounded-full" />
+            </div>
+            <Skeleton className="h-8 w-3/4 mx-auto" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-5/6 mx-auto" />
+            <p className="text-center text-sm text-muted-foreground mt-4">
+              Loading your Blobbis...
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error state
+  if (error) {
+    return (
+      <div
+        className="h-screen w-full overflow-hidden relative flex items-center justify-center"
+        style={{
+          backgroundImage: `url(${BlobbiBackground})`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '120px 120px',
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-950/40 dark:block hidden pointer-events-none" />
+        <Card className="w-full max-w-md shadow-2xl z-10">
+          <CardContent className="py-12 space-y-4 text-center">
+            <div className="text-6xl mb-4">😢</div>
+            <h2 className="text-xl font-bold">Error Loading Blobbis</h2>
+            <p className="text-sm text-muted-foreground">
+              {error instanceof Error ? error.message : 'Failed to load your Blobbis'}
+            </p>
+            <Button onClick={() => window.location.reload()}>
+              Reload Page
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Empty state - no Blobbis (should not happen if navigation logic works correctly)
+  const hasBlobbis = Array.isArray(blobbis) && blobbis.length > 0;
+  if (!hasBlobbis) {
+    return (
+      <div
+        className="h-screen w-full overflow-hidden relative flex items-center justify-center"
+        style={{
+          backgroundImage: `url(${BlobbiBackground})`,
+          backgroundRepeat: 'repeat',
+          backgroundSize: '120px 120px',
+        }}
+      >
+        <div className="absolute inset-0 bg-slate-950/40 dark:block hidden pointer-events-none" />
+        <Card className="w-full max-w-md shadow-2xl z-10">
+          <CardContent className="py-12 space-y-4 text-center">
+            <div className="text-6xl mb-4">🥚</div>
+            <h2 className="text-xl font-bold">No Blobbis Yet</h2>
+            <p className="text-sm text-muted-foreground">
+              You don't have any Blobbis yet. Adopt your first one!
+            </p>
+            <Button onClick={() => window.location.href = '/'}>
+              Go to Adoption
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Safe access to current Blobbi
   const currentBlobbi = blobbis[currentBlobbiIndex];
+  if (!currentBlobbi) {
+    console.error('[HomeScreen] currentBlobbi is undefined!', { currentBlobbiIndex, blobbisLength: blobbis.length });
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <Card className="w-full max-w-md shadow-2xl">
+          <CardContent className="py-12 space-y-4 text-center">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 className="text-xl font-bold">Blobbi Not Found</h2>
+            <p className="text-sm text-muted-foreground">
+              The selected Blobbi could not be loaded.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  console.log('[HomeScreen] currentBlobbi:', currentBlobbi);
+  console.log('[HomeScreen] lifeStage:', currentBlobbi.lifeStage);
+
   const isEgg = currentBlobbi.lifeStage === 'egg';
   const isBaby = currentBlobbi.lifeStage === 'baby';
   const isAdult = currentBlobbi.lifeStage === 'adult';
