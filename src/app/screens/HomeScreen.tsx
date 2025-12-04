@@ -54,6 +54,50 @@ import { useToast } from '@/hooks/useToast';
 import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 
+// CurrentBlobbiButton component - Circular orb with mini Blobbi graphic
+interface CurrentBlobbiButtonProps {
+  blobbi: Blobbi;
+  onClick?: () => void;
+}
+
+const CurrentBlobbiButton: React.FC<CurrentBlobbiButtonProps> = ({ blobbi, onClick }) => {
+  if (!blobbi) return null;
+
+  const handleClick = () => {
+    console.log('[CurrentBlobbiButton] Clicked, current Blobbi:', blobbi.name);
+    if (onClick) {
+      onClick();
+    }
+  };
+
+  const renderMiniGraphic = () => {
+    switch (blobbi.lifeStage) {
+      case 'egg':
+        return <EggGraphic blobbi={blobbi} animated={false} />;
+      case 'baby':
+        return <BabyGraphic blobbi={blobbi} animated={false} />;
+      case 'adult':
+        return <AdultGraphic blobbi={blobbi} animated={false} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <Button
+      variant="secondary"
+      size="icon"
+      title={`Current Blobbi: ${blobbi.name} (${blobbi.lifeStage})`}
+      className="pointer-events-auto rounded-full w-16 h-16 shadow-lg bg-white/95 dark:bg-[hsl(250,30%,12%)]/95 backdrop-blur-sm border-2 border-purple-200 dark:border-[hsl(250,25%,22%)] hover:bg-white dark:hover:bg-[hsl(250,30%,12%)] flex items-center justify-center overflow-hidden p-0"
+      onClick={handleClick}
+    >
+      <div className="scale-[0.6]">
+        {renderMiniGraphic()}
+      </div>
+    </Button>
+  );
+};
+
 interface HomeScreenProps {
   blobbis?: Blobbi[]; // Now optional, will use hook data
   userName?: string;
@@ -867,6 +911,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* CURRENT BLOBBI BUTTON - Only shown in MY_BLOBBI room */}
+      {currentRoom === 'MY_BLOBBI' && currentBlobbi && (
+        <div className="pointer-events-none absolute bottom-24 inset-x-0 flex justify-end px-4">
+          <CurrentBlobbiButton blobbi={currentBlobbi} />
+        </div>
+      )}
       </div>
     </div>
   );
