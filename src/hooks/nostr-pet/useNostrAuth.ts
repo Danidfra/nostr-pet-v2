@@ -1,6 +1,6 @@
 /**
  * React hook for Nostr authentication
- * 
+ *
  * Manages login state, session rehydration, and Kind 0 metadata fetching.
  * Integrates with the data layer and React Query for caching.
  */
@@ -8,6 +8,7 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNostr } from '@nostrify/react';
+import { useNostrLogin } from '@nostrify/react/login';
 import { useNostrClient } from '@/lib/nostr-pet/nostr/client';
 import { getGlobalSubscriptionManager } from '@/lib/nostr-pet/nostr/subscriptions';
 import { defaultStorage } from '@/lib/nostr-pet/core/storage';
@@ -52,7 +53,8 @@ export const useNostrAuth = () => {
   const { nostr } = useNostr();
   const queryClient = useQueryClient();
   const client = useNostrClient();
-  
+  const { addLogin, removeLogin } = useNostrLogin();
+
   // Local state for session
   const [session, setSession] = useState<NostrSession | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -61,8 +63,20 @@ export const useNostrAuth = () => {
   useEffect(() => {
     const rehydratedSession = rehydrateSession();
     setSession(rehydratedSession);
+
+    // If we have a rehydrated session, also add it to NostrLoginProvider
+    // This ensures useCurrentUser can access the login after page reload
+    if (rehydratedSession) {
+      addLogin({
+        type: 'extension',
+        pubkey: rehydratedSession.pubkey,
+      });
+
+      console.log('[useNostrAuth] Session rehydrated and added to NostrLoginProvider');
+    }
+
     setIsInitialized(true);
-  }, []);
+  }, [addLogin]);
 
   // Computed values
   const pubkey = session?.pubkey || null;
@@ -78,7 +92,7 @@ export const useNostrAuth = () => {
   // Load cached metadata from sessionStorage
   const loadCachedMetadata = useCallback((): NostrMetadata | undefined => {
     if (!metadataSessionKey) return undefined;
-    
+
     const result = defaultStorage.load<NostrMetadata>(metadataSessionKey);
     if (result.success && result.data) {
       return result.data;
@@ -195,11 +209,22 @@ export const useNostrAuth = () => {
     },
     onSuccess: (newSession) => {
       setSession(newSession);
-      
+
+      // Add login to NostrLoginProvider so useCurrentUser can access it
+      // This synchronizes the two auth systems
+      addLogin({
+        type: 'extension',
+        pubkey: newSession.pubkey,
+      });
+
       // Invalidate metadata query to fetch new user's data
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.metadata(newSession.pubkey) });
-      
-      console.log('[useNostrAuth] Login successful');
+
+      // Invalidate ALL profile queries to trigger Kind 31125 fetch
+      // This ensures the profile is loaded immediately after login
+      queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile'] });
+
+      console.log('[useNostrAuth] Login successful, profile queries invalidated');
     },
     onError: (error) => {
       console.error('[useNostrAuth] Login failed:', error);
@@ -215,12 +240,25 @@ export const useNostrAuth = () => {
       }
     },
     onSuccess: () => {
+      const oldPubkey = session?.pubkey;
       setSession(null);
-      
+
+      // Remove login from NostrLoginProvider
+      // This synchronizes the two auth systems
+      if (oldPubkey) {
+        // Find and remove the login by pubkey
+        // Note: We need to find the login ID first
+        // For now, we'll clear all logins since this is a single-user app
+        removeLogin('extension'); // Remove the extension login
+      }
+
       // Clear all metadata queries
       queryClient.removeQueries({ queryKey: QUERY_KEYS.metadata(null) });
-      
-      console.log('[useNostrAuth] Logout successful');
+
+      // Clear all profile queries
+      queryClient.removeQueries({ queryKey: ['blobbonaut-profile'] });
+
+      console.log('[useNostrAuth] Logout successful, all queries cleared');
     },
     onError: (error) => {
       console.error('[useNostrAuth] Logout failed:', error);

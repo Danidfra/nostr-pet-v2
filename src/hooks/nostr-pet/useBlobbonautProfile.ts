@@ -88,6 +88,8 @@ export const useBlobbonautProfile = (profileId?: string) => {
 
   // Query function for fetching profile from Nostr
   const fetchProfile = useCallback(async (): Promise<BlobbonautProfile | null> => {
+    console.log('[Profile Hook] Fetching profile...', { effectiveProfileId, effectivePubkey });
+
     if (!client || !nostr) {
       throw new Error('Nostr client not available');
     }
@@ -96,12 +98,14 @@ export const useBlobbonautProfile = (profileId?: string) => {
 
     if (effectiveProfileId) {
       // Query by specific profile ID
+      console.log('[Profile Hook] Querying by profile ID:', effectiveProfileId);
       result = await client.queryOne({
         kind: BLOBBONAUT_PROFILE_KIND,
         tags: { d: effectiveProfileId },
       });
     } else if (effectivePubkey) {
       // Query by author and filter for Blobbi ecosystem
+      console.log('[Profile Hook] Querying by author pubkey:', effectivePubkey.slice(0, 8) + '...');
       const queryResult = await client.query({
         kind: BLOBBONAUT_PROFILE_KIND,
         author: effectivePubkey,
@@ -114,6 +118,8 @@ export const useBlobbonautProfile = (profileId?: string) => {
 
       // Filter for Blobbi ecosystem tags
       const allEvents = queryResult.data || [];
+      console.log('[Profile Hook] Received events:', allEvents.length);
+
       const blobbiEvents = allEvents.filter(event => {
         const hasEcosystem = event.tags.some(([name, value]) =>
           name === 'b' && value === 'blobbi:ecosystem:v1'
@@ -123,6 +129,8 @@ export const useBlobbonautProfile = (profileId?: string) => {
         );
         return hasEcosystem || hasTopic;
       });
+
+      console.log('[Profile Hook] Filtered Blobbi events:', blobbiEvents.length);
 
       // Get the latest event
       const latestEvent = blobbiEvents.sort((a, b) => b.created_at - a.created_at)[0];
@@ -137,15 +145,18 @@ export const useBlobbonautProfile = (profileId?: string) => {
     }
 
     if (!result.data) {
+      console.log('[Profile Hook] No profile found');
       return null;
     }
 
     // Parse the event
+    console.log('[Profile Hook] Parsing profile event...');
     const profile = parseBlobbonautProfileFromEvent(result.data);
     if (!profile) {
       throw new Error('Failed to parse profile event');
     }
 
+    console.log('[Profile Hook] Profile loaded successfully:', profile.id);
     return profile;
   }, [client, nostr, effectiveProfileId, effectivePubkey]);
 
