@@ -224,7 +224,11 @@ export const useNostrAuth = () => {
       // This ensures the profile is loaded immediately after login
       queryClient.invalidateQueries({ queryKey: ['blobbonaut-profile'] });
 
-      console.log('[useNostrAuth] Login successful, profile queries invalidated');
+      // Invalidate ALL Blobbi status queries to trigger Kind 31124 fetch
+      // This ensures Blobbis are loaded immediately after login
+      queryClient.invalidateQueries({ queryKey: ['blobbi-status-list'] });
+
+      console.log('[useNostrAuth] Login successful, profile and Blobbi queries invalidated');
     },
     onError: (error) => {
       console.error('[useNostrAuth] Login failed:', error);
@@ -257,6 +261,9 @@ export const useNostrAuth = () => {
 
       // Clear all profile queries
       queryClient.removeQueries({ queryKey: ['blobbonaut-profile'] });
+
+      // Clear all Blobbi status queries
+      queryClient.removeQueries({ queryKey: ['blobbi-status-list'] });
 
       console.log('[useNostrAuth] Logout successful, all queries cleared');
     },

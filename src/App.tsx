@@ -14,6 +14,7 @@ import { mockBlobbis } from '@/data/mockBlobbis';
 import { Blobbi } from '@/types/blobbi';
 import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
 import { useCurrentUserBlobbonautProfile } from '@/hooks/nostr-pet/useBlobbonautProfile';
+import { useBlobbisLoaded } from '@/hooks/nostr-pet/useBlobbiStatus';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -41,27 +42,48 @@ const defaultConfig: AppConfig = {
 
 function BlobbiAppInner() {
   const { isLoggedIn, isInitialized, logout: authLogout } = useNostrAuth();
-  const { hasProfile, profile, isInitialLoading } = useCurrentUserBlobbonautProfile();
+  const { hasProfile, profile, isInitialLoading: isProfileLoading } = useCurrentUserBlobbonautProfile();
+  const { blobbis: realBlobbis, isLoaded: areBlobbisLoaded, hasBlobbis } = useBlobbisLoaded();
 
   const [appState, setAppState] = useState<AppState>('auth');
   const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
 
-  // Determine app state based on auth and profile status
+  // Determine app state based on auth, profile, and Blobbis status
   useEffect(() => {
+    console.log('[App Navigation] State check:', {
+      isInitialized,
+      isLoggedIn,
+      hasProfile,
+      isProfileLoading,
+      areBlobbisLoaded,
+      hasBlobbis,
+      realBlobbisCount: realBlobbis.length,
+      mockBlobbisCount: blobbis.length,
+    });
+
     if (!isInitialized) {
+      console.log('[App Navigation] Waiting for auth initialization...');
       return; // Wait for auth to initialize
     }
 
     if (!isLoggedIn) {
+      console.log('[App Navigation] Not logged in → AuthScreen');
       setAppState('auth');
-    } else if (!hasProfile && !isInitialLoading) {
+    } else if (!hasProfile && !isProfileLoading) {
+      console.log('[App Navigation] Logged in but no profile → ProfileSetupScreen');
       setAppState('profile-setup');
-    } else if (hasProfile && blobbis.length === 0) {
-      setAppState('adoption');
-    } else if (hasProfile && blobbis.length > 0) {
+    } else if (hasProfile && !areBlobbisLoaded) {
+      console.log('[App Navigation] Profile exists, waiting for Blobbis to load...');
+      // Wait for Blobbis to load before deciding
+      return;
+    } else if (hasProfile && areBlobbisLoaded && hasBlobbis) {
+      console.log('[App Navigation] Has profile and Blobbis → HomeScreen');
       setAppState('home');
+    } else if (hasProfile && areBlobbisLoaded && !hasBlobbis) {
+      console.log('[App Navigation] Has profile but no Blobbis → AdoptionScreen');
+      setAppState('adoption');
     }
-  }, [isLoggedIn, hasProfile, isInitialized, isInitialLoading, blobbis.length]);
+  }, [isInitialized, isLoggedIn, hasProfile, isProfileLoading, areBlobbisLoaded, hasBlobbis, realBlobbis.length, blobbis.length]);
 
   const handleLoginSuccess = () => {
     // State will automatically transition via useEffect
