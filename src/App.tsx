@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHead, UnheadProvider } from '@unhead/react/client';
+import { NostrLoginProvider } from '@nostrify/react/login';
 import { AppProvider } from '@/components/AppProvider';
 import NostrProvider from '@/components/NostrProvider';
 import { AppConfig } from '@/contexts/AppContext';
@@ -155,9 +156,11 @@ export function App() {
     <UnheadProvider head={head}>
       <AppProvider storageKey='blobbi-app-config' defaultConfig={defaultConfig}>
         <QueryClientProvider client={queryClient}>
-          <NostrProvider>
-            <BlobbiAppInner />
-          </NostrProvider>
+          <NostrLoginProvider storageKey='blobbi-login'>
+            <NostrProvider>
+              <BlobbiAppInner />
+            </NostrProvider>
+          </NostrLoginProvider>
         </QueryClientProvider>
       </AppProvider>
     </UnheadProvider>

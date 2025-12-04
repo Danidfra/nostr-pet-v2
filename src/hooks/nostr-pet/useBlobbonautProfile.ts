@@ -158,6 +158,8 @@ export const useBlobbonautProfile = (profileId?: string) => {
     staleTime: 30000, // 30 seconds
     refetchOnWindowFocus: false,
     refetchInterval: false, // We use subscriptions instead
+    // Only enable query when we have a valid user or profile ID
+    // This prevents queries when user is not logged in
     enabled: !!client && !!nostr && (!!effectiveProfileId || !!effectivePubkey),
   });
 
@@ -175,7 +177,9 @@ export const useBlobbonautProfile = (profileId?: string) => {
 
   // Set up real-time subscription
   useEffect(() => {
-    if (!client || !effectivePubkey) return;
+    // Only subscribe if we have a user (either from effectivePubkey or effectiveProfileId)
+    if (!client) return;
+    if (!effectivePubkey && !effectiveProfileId) return;
 
     const subscriptionManager = getGlobalSubscriptionManager();
     if (!subscriptionManager) return;
