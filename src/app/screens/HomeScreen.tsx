@@ -124,12 +124,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   console.log('[HomeScreen] isLoading:', isLoading);
   console.log('[HomeScreen] isInitialLoading:', isInitialLoading);
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
-  const [currentBlobbiIndex] = useState(0);
+  const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
   const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
   const [isStatusOpen, setIsStatusOpen] = useState(true);
   const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
+  const [isBlobbiSelectorOpen, setIsBlobbiSelectorOpen] = useState(false);
   const { toast } = useToast();
 
   // Loading state
@@ -917,9 +918,52 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         {/* CURRENT BLOBBI BUTTON - Only shown in MY_BLOBBI room */}
         {currentRoom === 'MY_BLOBBI' && currentBlobbi && (
           <div className="pointer-events-none absolute bottom-24 inset-x-0 flex justify-end px-4">
-            <CurrentBlobbiButton blobbi={currentBlobbi} />
+            <CurrentBlobbiButton
+              blobbi={currentBlobbi}
+              onClick={() => setIsBlobbiSelectorOpen(true)}
+            />
           </div>
         )}
+
+        {/* BLOBBI SELECTOR MODAL */}
+        <Dialog open={isBlobbiSelectorOpen} onOpenChange={setIsBlobbiSelectorOpen}>
+          <DialogContent className="w-[94vw] max-w-md max-h-[80vh] flex flex-col">
+            <DialogHeader>
+              <DialogTitle>My Blobbies</DialogTitle>
+            </DialogHeader>
+
+            <div className="flex-1 overflow-y-auto space-y-2 py-2">
+              {blobbis.map((blobbi, index) => (
+                <Button
+                  key={blobbi.id}
+                  variant={index === currentBlobbiIndex ? 'default' : 'outline'}
+                  className="w-full justify-start gap-3 h-auto py-3"
+                  onClick={() => {
+                    setCurrentBlobbiIndex(index);
+                    setIsBlobbiSelectorOpen(false);
+                  }}
+                >
+                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
+                    <div className="scale-75">
+                      {blobbi.lifeStage === 'egg' && <EggGraphic blobbi={blobbi} animated={false} />}
+                      {blobbi.lifeStage === 'baby' && <BabyGraphic blobbi={blobbi} animated={false} />}
+                      {blobbi.lifeStage === 'adult' && <AdultGraphic blobbi={blobbi} animated={false} />}
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-start text-left">
+                    <span className="font-medium truncate max-w-[160px]">
+                      {blobbi.name}
+                    </span>
+                    <span className="text-xs text-muted-foreground capitalize">
+                      {blobbi.lifeStage}
+                      {blobbi.evolutionForm && ` • ${blobbi.evolutionForm}`}
+                    </span>
+                  </div>
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
