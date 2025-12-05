@@ -84,17 +84,19 @@ const CurrentBlobbiButton: React.FC<CurrentBlobbiButtonProps> = ({ blobbi, onCli
   };
 
   return (
-    <Button
-      variant="secondary"
-      size="icon"
-      title={`Current Blobbi: ${blobbi.name} (${blobbi.lifeStage})`}
-      className="pointer-events-auto rounded-full w-16 h-16 shadow-lg bg-white/95 dark:bg-[hsl(250,30%,12%)]/95 backdrop-blur-sm border-2 border-purple-200 dark:border-[hsl(250,25%,22%)] hover:bg-white dark:hover:bg-[hsl(250,30%,12%)] flex items-center justify-center overflow-hidden p-0"
-      onClick={handleClick}
-    >
-      <div className="scale-[0.6]">
-        {renderMiniGraphic()}
-      </div>
-    </Button>
+    <div className="pointer-events-none">
+      <Button
+        variant="secondary"
+        size="icon"
+        title={`Current Blobbi: ${blobbi.name} (${blobbi.lifeStage})`}
+        className="pointer-events-auto rounded-full w-14 h-14 shadow-lg bg-white/95 dark:bg-[hsl(250,30%,12%)]/95 backdrop-blur-sm border-2 border-purple-200 dark:border-[hsl(250,25%,22%)] hover:bg-white dark:hover:bg-[hsl(250,30%,12%)] flex items-center justify-center overflow-hidden p-0 transition-transform hover:scale-105"
+        onClick={handleClick}
+      >
+        <div className="scale-75">
+          {renderMiniGraphic()}
+        </div>
+      </Button>
+    </div>
   );
 };
 
@@ -912,12 +914,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         </DialogContent>
       </Dialog>
 
-      {/* CURRENT BLOBBI BUTTON - Only shown in MY_BLOBBI room */}
-      {currentRoom === 'MY_BLOBBI' && currentBlobbi && (
-        <div className="pointer-events-none absolute bottom-24 inset-x-0 flex justify-end px-4">
-          <CurrentBlobbiButton blobbi={currentBlobbi} />
-        </div>
-      )}
+        {/* CURRENT BLOBBI BUTTON - Only shown in MY_BLOBBI room */}
+        {currentRoom === 'MY_BLOBBI' && currentBlobbi && (
+          <div className="pointer-events-none absolute bottom-24 inset-x-0 flex justify-end px-4">
+            <CurrentBlobbiButton blobbi={currentBlobbi} />
+          </div>
+        )}
       </div>
     </div>
   );
