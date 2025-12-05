@@ -6,7 +6,7 @@
  */
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNostr } from '@nostrify/react';
 import { NLogin, useNostrLogin } from '@nostrify/react/login';
 import { useNostrClient } from '@/lib/nostr-pet/nostr/client';
@@ -53,27 +53,44 @@ export const useNostrAuth = () => {
   const { nostr } = useNostr();
   const queryClient = useQueryClient();
   const client = useNostrClient();
-  const { addLogin, removeLogin } = useNostrLogin();
+  const { logins, addLogin, removeLogin } = useNostrLogin();
 
   // Local state for session
   const [session, setSession] = useState<NostrSession | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // Guard to ensure rehydration runs only once
+  const hasRehydratedRef = useRef(false);
+
   // Rehydrate session on mount - ONLY ONCE
   useEffect(() => {
-    const rehydrate = async () => {
+    // Prevent multiple rehydrations
+    if (hasRehydratedRef.current) {
+      return;
+    }
+    hasRehydratedRef.current = true;
+
+    const rehydrate = () => {
       const rehydratedSession = rehydrateSession();
       setSession(rehydratedSession);
 
-      // If we have a rehydrated session, also add it to NostrLoginProvider
+      // If we have a rehydrated session, reconstruct the login WITHOUT calling NIP-07
       // This ensures useCurrentUser can access the login after page reload
       if (rehydratedSession) {
-        try {
-          const login = await NLogin.fromExtension();
-          addLogin(login);
-          console.log('[useNostrAuth] Session rehydrated and added to NostrLoginProvider');
-        } catch (error) {
-          console.error('[useNostrAuth] Failed to create login from extension:', error);
+        // Check if this login already exists in the provider
+        const existingLogin = logins.find(
+          (login) => login.pubkey === rehydratedSession.pubkey && login.type === 'extension'
+        );
+
+        // Only add if it doesn't already exist
+        if (!existingLogin) {
+          // Manually construct the NLogin object WITHOUT calling fromExtension()
+          // This avoids triggering the NIP-07 permission popup
+          const reconstructedLogin = new NLogin('extension', rehydratedSession.pubkey, null);
+          addLogin(reconstructedLogin);
+          console.log('[useNostrAuth] Session rehydrated and login reconstructed (no NIP-07 call)');
+        } else {
+          console.log('[useNostrAuth] Session rehydrated, login already exists in provider');
         }
       }
 
@@ -82,7 +99,7 @@ export const useNostrAuth = () => {
 
     rehydrate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run only once on mount - addLogin is intentionally excluded
+  }, []); // Run only once on mount - all dependencies intentionally excluded
 
   // Computed values
   const pubkey = session?.pubkey || null;
@@ -208,6 +225,8 @@ export const useNostrAuth = () => {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (): Promise<NostrSession> => {
+      // This is where we ACTUALLY call the extension and request permission
+      // This should ONLY happen when the user explicitly clicks "Login"
       const newSession = await loginWithNostr();
       if (!newSession) {
         throw new Error('Login failed');
@@ -219,11 +238,29 @@ export const useNostrAuth = () => {
 
       // Add login to NostrLoginProvider so useCurrentUser can access it
       // This synchronizes the two auth systems
+      // HERE is where we call fromExtension() - during actual login flow
       try {
-        const login = await NLogin.fromExtension();
-        addLogin(login);
+        // Check if login already exists to avoid duplicates
+        const existingLogin = logins.find(
+          (login) => login.pubkey === newSession.pubkey && login.type === 'extension'
+        );
+
+        if (!existingLogin) {
+          // Call fromExtension() ONLY during explicit login
+          // This will trigger the NIP-07 permission popup (expected behavior)
+          const login = await NLogin.fromExtension();
+          addLogin(login);
+          console.log('[useNostrAuth] Login successful, NLogin created from extension');
+        } else {
+          console.log('[useNostrAuth] Login successful, using existing NLogin');
+        }
       } catch (error) {
         console.error('[useNostrAuth] Failed to create login from extension:', error);
+        // Even if NLogin creation fails, we still have the session
+        // Fallback: manually construct the login
+        const fallbackLogin = new NLogin('extension', newSession.pubkey, null);
+        addLogin(fallbackLogin);
+        console.log('[useNostrAuth] Fallback: manually constructed NLogin');
       }
 
       // Invalidate metadata query to fetch new user's data
