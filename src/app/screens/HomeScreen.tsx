@@ -75,9 +75,9 @@ const MiniBlobbiAvatar: React.FC<MiniBlobbiAvatarProps> = ({ blobbi }) => {
 
   return (
     <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
-      {/* Inner box that enforces strong scaling */}
-      <div className="w-9 h-9 flex items-center justify-center">
-        <div className="scale-[0.30] origin-center pointer-events-none">
+      {/* Smaller inner box + stronger scale reduction for proper padding */}
+      <div className="w-8 h-8 flex items-center justify-center">
+        <div className="scale-[0.20] origin-center pointer-events-none">
           {renderMiniGraphic()}
         </div>
       </div>
