@@ -54,6 +54,37 @@ import { useToast } from '@/hooks/useToast';
 import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 
+// MiniBlobbiAvatar component - Reusable mini Blobbi graphic for avatars
+interface MiniBlobbiAvatarProps {
+  blobbi: Blobbi;
+}
+
+const MiniBlobbiAvatar: React.FC<MiniBlobbiAvatarProps> = ({ blobbi }) => {
+  const renderMiniGraphic = () => {
+    switch (blobbi.lifeStage) {
+      case 'egg':
+        return <EggGraphic blobbi={blobbi} animated={false} />;
+      case 'baby':
+        return <BabyGraphic blobbi={blobbi} animated={false} />;
+      case 'adult':
+        return <AdultGraphic blobbi={blobbi} animated={false} />;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden">
+      {/* Inner box that enforces strong scaling */}
+      <div className="w-9 h-9 flex items-center justify-center">
+        <div className="scale-[0.30] origin-center pointer-events-none">
+          {renderMiniGraphic()}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // CurrentBlobbiButton component - Circular orb with mini Blobbi graphic
 interface CurrentBlobbiButtonProps {
   blobbi: Blobbi;
@@ -67,19 +98,6 @@ const CurrentBlobbiButton: React.FC<CurrentBlobbiButtonProps> = ({ blobbi, onCli
     console.log('[CurrentBlobbiButton] Clicked, current Blobbi:', blobbi.name);
     if (onClick) {
       onClick();
-    }
-  };
-
-  const renderMiniGraphic = () => {
-    switch (blobbi.lifeStage) {
-      case 'egg':
-        return <EggGraphic blobbi={blobbi} animated={false} />;
-      case 'baby':
-        return <BabyGraphic blobbi={blobbi} animated={false} />;
-      case 'adult':
-        return <AdultGraphic blobbi={blobbi} animated={false} />;
-      default:
-        return null;
     }
   };
 
@@ -97,14 +115,7 @@ const CurrentBlobbiButton: React.FC<CurrentBlobbiButtonProps> = ({ blobbi, onCli
                    transition-transform hover:scale-105"
         onClick={handleClick}
       >
-        {/* Hard constraint box for the mini graphic */}
-        <div className="w-12 h-12 flex items-center justify-center">
-          <div className="w-10 h-10 overflow-hidden flex items-center justify-center">
-            <div className="scale-[0.55] origin-center">
-              {renderMiniGraphic()}
-            </div>
-          </div>
-        </div>
+        <MiniBlobbiAvatar blobbi={blobbi} />
       </Button>
     </div>
   );
@@ -953,14 +964,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                     setIsBlobbiSelectorOpen(false);
                   }}
                 >
-                  <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <div className="w-9 h-9 flex items-center justify-center">
-                      <div className="scale-[0.55] origin-center">
-                        {blobbi.lifeStage === 'egg' && <EggGraphic blobbi={blobbi} animated={false} />}
-                        {blobbi.lifeStage === 'baby' && <BabyGraphic blobbi={blobbi} animated={false} />}
-                        {blobbi.lifeStage === 'adult' && <AdultGraphic blobbi={blobbi} animated={false} />}
-                      </div>
-                    </div>
+                  <div className="flex-shrink-0">
+                    <MiniBlobbiAvatar blobbi={blobbi} />
                   </div>
                   <div className="flex flex-col items-start text-left">
                     <span className="font-medium truncate max-w-[160px]">

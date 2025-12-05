@@ -112,12 +112,12 @@
   html {
     /* Firefox */
     scrollbar-width: thin;
-    scrollbar-color: #A855F7 #F5E9FF; /* thumb, track */
+    /* thumb color, transparent track */
+    scrollbar-color: #A855F7 transparent;
   }
 
-  /* Dark mode Firefox scrollbar */
   html.dark {
-    scrollbar-color: #A855F7 hsl(250, 25%, 18%);
+    scrollbar-color: #A855F7 transparent;
   }
 
   /* WebKit-based browsers (Chrome, Edge, Safari) */
@@ -127,22 +127,22 @@
   }
 
   *::-webkit-scrollbar-track {
-    background: #F5E9FF; /* light purple/pink */
+    background: transparent; /* let the surface show through */
   }
 
   .dark *::-webkit-scrollbar-track {
-    background: hsl(250, 25%, 18%); /* dark mode track */
+    background: transparent;
   }
 
   *::-webkit-scrollbar-thumb {
     background: #A855F7; /* purple thumb */
     border-radius: 9999px;
-    border: 2px solid #F5E9FF; /* gives a pill feel */
+    border: 0; /* no border for a more subtle feel */
   }
 
   .dark *::-webkit-scrollbar-thumb {
     background: #A855F7;
-    border: 2px solid hsl(250, 25%, 18%);
+    border: 0;
   }
 
   *::-webkit-scrollbar-thumb:hover {
