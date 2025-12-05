@@ -136,10 +136,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const { blobbis: blobbiStatusList, isLoading, isInitialLoading, error } = useMyBlobbis();
 
   // Convert BlobbiStatus to legacy Blobbi type for compatibility
+  // Use JSON.stringify for stable dependency comparison to prevent infinite re-renders
   const blobbis = useMemo(() => {
     console.log('[HomeScreen] blobbis from hook:', blobbiStatusList);
     return mapBlobbiStatusListToBlobbis(blobbiStatusList);
-  }, [blobbiStatusList]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [JSON.stringify(blobbiStatusList)]); // Use stringified version for stable comparison
 
   console.log('[HomeScreen] mapped blobbis:', blobbis);
   console.log('[HomeScreen] isLoading:', isLoading);

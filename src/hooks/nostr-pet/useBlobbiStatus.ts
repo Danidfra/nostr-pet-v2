@@ -204,7 +204,8 @@ export const useMyBlobbis = () => {
     );
 
     return unsubscribe;
-  }, [client, userPubkey, queryClient, updateStatusListData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, userPubkey]); // queryClient and updateStatusListData excluded - they're stable
 
   // Computed values
   const blobbis = statusQuery.data || [];
@@ -216,7 +217,7 @@ export const useMyBlobbis = () => {
     // Data
     blobbis,
     count: blobbis.length,
-    
+
     // Query state
     isLoading,
     isInitialLoading,
@@ -233,7 +234,6 @@ export const useMyBlobbis = () => {
  * Hook for fetching a specific Blobbi by ID
  */
 export const useBlobbi = (blobbiId: string) => {
-  const { user } = useCurrentUser();
   const { blobbis } = useMyBlobbis();
 
   // Find the Blobbi in the list

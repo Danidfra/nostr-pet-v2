@@ -8,7 +8,7 @@
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNostr } from '@nostrify/react';
-import { useNostrLogin } from '@nostrify/react/login';
+import { NLogin, useNostrLogin } from '@nostrify/react/login';
 import { useNostrClient } from '@/lib/nostr-pet/nostr/client';
 import { getGlobalSubscriptionManager } from '@/lib/nostr-pet/nostr/subscriptions';
 import { defaultStorage } from '@/lib/nostr-pet/core/storage';
@@ -59,24 +59,30 @@ export const useNostrAuth = () => {
   const [session, setSession] = useState<NostrSession | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Rehydrate session on mount
+  // Rehydrate session on mount - ONLY ONCE
   useEffect(() => {
-    const rehydratedSession = rehydrateSession();
-    setSession(rehydratedSession);
+    const rehydrate = async () => {
+      const rehydratedSession = rehydrateSession();
+      setSession(rehydratedSession);
 
-    // If we have a rehydrated session, also add it to NostrLoginProvider
-    // This ensures useCurrentUser can access the login after page reload
-    if (rehydratedSession) {
-      addLogin({
-        type: 'extension',
-        pubkey: rehydratedSession.pubkey,
-      });
+      // If we have a rehydrated session, also add it to NostrLoginProvider
+      // This ensures useCurrentUser can access the login after page reload
+      if (rehydratedSession) {
+        try {
+          const login = await NLogin.fromExtension();
+          addLogin(login);
+          console.log('[useNostrAuth] Session rehydrated and added to NostrLoginProvider');
+        } catch (error) {
+          console.error('[useNostrAuth] Failed to create login from extension:', error);
+        }
+      }
 
-      console.log('[useNostrAuth] Session rehydrated and added to NostrLoginProvider');
-    }
+      setIsInitialized(true);
+    };
 
-    setIsInitialized(true);
-  }, [addLogin]);
+    rehydrate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Run only once on mount - addLogin is intentionally excluded
 
   // Computed values
   const pubkey = session?.pubkey || null;
@@ -196,7 +202,8 @@ export const useNostrAuth = () => {
     );
 
     return unsubscribe;
-  }, [client, pubkey, isInitialized, queryClient, updateMetadataData]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [client, pubkey, isInitialized]); // updateMetadataData and queryClient excluded - they're stable enough
 
   // Login mutation
   const loginMutation = useMutation({
@@ -207,15 +214,17 @@ export const useNostrAuth = () => {
       }
       return newSession;
     },
-    onSuccess: (newSession) => {
+    onSuccess: async (newSession) => {
       setSession(newSession);
 
       // Add login to NostrLoginProvider so useCurrentUser can access it
       // This synchronizes the two auth systems
-      addLogin({
-        type: 'extension',
-        pubkey: newSession.pubkey,
-      });
+      try {
+        const login = await NLogin.fromExtension();
+        addLogin(login);
+      } catch (error) {
+        console.error('[useNostrAuth] Failed to create login from extension:', error);
+      }
 
       // Invalidate metadata query to fetch new user's data
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.metadata(newSession.pubkey) });

@@ -31,6 +31,18 @@ import {
 import { BLOBBI_STATE_KIND } from '../core/kinds';
 
 /**
+ * Helper to parse numeric tag with guaranteed default
+ * This is a type-safe wrapper that ensures we never return undefined
+ */
+const parseRequiredNumericTag = (
+  tags: NostrTag[],
+  tagName: string,
+  defaultValue: number
+): number => {
+  return parseNumericTag(tags, tagName, defaultValue) ?? defaultValue;
+};
+
+/**
  * Extract Blobbi name from d tag
  */
 const extractBlobbiName = (dTag: string): string => {
@@ -156,50 +168,50 @@ export const parseBlobbiStatusFromEvent = (event: NostrEvent): BlobbiStatus | nu
       BLOBBI_STATUS_TAG_NAMES.BREEDING_READY,
       BLOBBI_STATUS_DEFAULTS.breedingReady
     );
-    const generation = parseNumericTag(
+    const generation = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.GENERATION,
       BLOBBI_STATUS_DEFAULTS.generation
     );
 
-    // Parse stats with defaults
-    const hunger = parseNumericTag(
+    // Parse stats with defaults (required fields)
+    const hunger = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.HUNGER,
       BLOBBI_STATUS_DEFAULTS.hunger
     );
-    const happiness = parseNumericTag(
+    const happiness = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.HAPPINESS,
       BLOBBI_STATUS_DEFAULTS.happiness
     );
-    const health = parseNumericTag(
+    const health = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.HEALTH,
       BLOBBI_STATUS_DEFAULTS.health
     );
-    const hygiene = parseNumericTag(
+    const hygiene = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.HYGIENE,
       BLOBBI_STATUS_DEFAULTS.hygiene
     );
-    const energy = parseNumericTag(
+    const energy = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.ENERGY,
       BLOBBI_STATUS_DEFAULTS.energy
     );
-    const experience = parseNumericTag(
+    const experience = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.EXPERIENCE,
       BLOBBI_STATUS_DEFAULTS.experience
     );
-    const careStreak = parseNumericTag(
+    const careStreak = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.CARE_STREAK,
       BLOBBI_STATUS_DEFAULTS.careStreak
     );
 
-    const lastInteraction = parseNumericTag(
+    const lastInteraction = parseRequiredNumericTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.LAST_INTERACTION,
       event.created_at
@@ -243,20 +255,20 @@ export const parseBlobbiStatusFromEvent = (event: NostrEvent): BlobbiStatus | nu
     );
     const stateStr = getTagValue(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.STATE);
     const state = (stateStr || BLOBBI_STATUS_DEFAULTS.state) as BlobbiState;
-    const sleepStartedAt = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.SLEEP_STARTED_AT);
-    const lastSleepUpdate = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_SLEEP_UPDATE);
+    const sleepStartedAt = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.SLEEP_STARTED_AT, 0);
+    const lastSleepUpdate = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_SLEEP_UPDATE, 0);
     const isDirty = parseBooleanTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.IS_DIRTY);
     const hasBuff = getTagValue(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.HAS_BUFF);
     const hasDebuff = getTagValue(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.HAS_DEBUFF);
 
     // Parse care tracking timestamps
-    const lastMeal = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_MEAL);
-    const lastClean = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_CLEAN);
-    const lastWarm = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_WARM);
-    const lastCheck = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_CHECK);
-    const lastSing = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_SING);
-    const lastTalk = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_TALK);
-    const lastMedicine = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_MEDICINE);
+    const lastMeal = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_MEAL, 0);
+    const lastClean = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_CLEAN, 0);
+    const lastWarm = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_WARM, 0);
+    const lastCheck = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_CHECK, 0);
+    const lastSing = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_SING, 0);
+    const lastTalk = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_TALK, 0);
+    const lastMedicine = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_MEDICINE, 0);
 
     // Parse social tags
     const adoptedBy = getTagValue(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.ADOPTED_BY);

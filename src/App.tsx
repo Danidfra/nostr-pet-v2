@@ -83,7 +83,8 @@ function BlobbiAppInner() {
       console.log('[App Navigation] Has profile but no Blobbis → AdoptionScreen');
       setAppState('adoption');
     }
-  }, [isInitialized, isLoggedIn, hasProfile, isProfileLoading, areBlobbisLoaded, hasBlobbis, realBlobbis.length, blobbis.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isInitialized, isLoggedIn, hasProfile, isProfileLoading, areBlobbisLoaded, hasBlobbis]); // Removed array lengths - they cause unnecessary re-renders
 
   const handleLoginSuccess = () => {
     // State will automatically transition via useEffect
