@@ -89,11 +89,21 @@ const CurrentBlobbiButton: React.FC<CurrentBlobbiButtonProps> = ({ blobbi, onCli
         variant="secondary"
         size="icon"
         title={`Current Blobbi: ${blobbi.name} (${blobbi.lifeStage})`}
-        className="pointer-events-auto rounded-full w-14 h-14 shadow-lg bg-white/95 dark:bg-[hsl(250,30%,12%)]/95 backdrop-blur-sm border-2 border-purple-200 dark:border-[hsl(250,25%,22%)] hover:bg-white dark:hover:bg-[hsl(250,30%,12%)] flex items-center justify-center overflow-hidden p-0 transition-transform hover:scale-105"
+        className="pointer-events-auto rounded-full w-16 h-16 shadow-lg
+                    bg-white/95 dark:bg-[hsl(250,30%,12%)]/95
+                    backdrop-blur-sm border-2 border-purple-200
+                    dark:border-[hsl(250,25%,22%)]
+                   flex items-center justify-center overflow-hidden p-0
+                   transition-transform hover:scale-105"
         onClick={handleClick}
       >
-        <div className="scale-75">
-          {renderMiniGraphic()}
+        {/* Hard constraint box for the mini graphic */}
+        <div className="w-12 h-12 flex items-center justify-center">
+          <div className="w-10 h-10 overflow-hidden flex items-center justify-center">
+            <div className="scale-[0.55] origin-center">
+              {renderMiniGraphic()}
+            </div>
+          </div>
         </div>
       </Button>
     </div>
@@ -944,10 +954,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                   }}
                 >
                   <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center overflow-hidden flex-shrink-0">
-                    <div className="scale-75">
-                      {blobbi.lifeStage === 'egg' && <EggGraphic blobbi={blobbi} animated={false} />}
-                      {blobbi.lifeStage === 'baby' && <BabyGraphic blobbi={blobbi} animated={false} />}
-                      {blobbi.lifeStage === 'adult' && <AdultGraphic blobbi={blobbi} animated={false} />}
+                    <div className="w-9 h-9 flex items-center justify-center">
+                      <div className="scale-[0.55] origin-center">
+                        {blobbi.lifeStage === 'egg' && <EggGraphic blobbi={blobbi} animated={false} />}
+                        {blobbi.lifeStage === 'baby' && <BabyGraphic blobbi={blobbi} animated={false} />}
+                        {blobbi.lifeStage === 'adult' && <AdultGraphic blobbi={blobbi} animated={false} />}
+                      </div>
                     </div>
                   </div>
                   <div className="flex flex-col items-start text-left">
