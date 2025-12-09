@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHead, UnheadProvider } from '@unhead/react/client';
 import { NostrLoginProvider } from '@nostrify/react/login';
@@ -10,15 +10,13 @@ import { AuthScreen } from '@/app/screens/AuthScreen';
 import { ProfileSetupScreen } from '@/app/screens/ProfileSetupScreen';
 import { BlobbiAdoptionScreen } from '@/app/screens/BlobbiAdoptionScreen';
 import { HomeScreen } from '@/app/screens/HomeScreen';
+import { AuthLoadingScreen } from '@/components/AuthLoadingScreen';
+import { AppLoadingScreen } from '@/components/AppLoadingScreen';
 import { mockBlobbis } from '@/data/mockBlobbis';
 import { Blobbi } from '@/types/blobbi';
 import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
 import { useCurrentUserBlobbonautProfile } from '@/hooks/nostr-pet/useBlobbonautProfile';
 import { useBlobbisLoaded } from '@/hooks/nostr-pet/useBlobbiStatus';
-import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent } from '@/components/ui/card';
-
-type AppState = 'auth' | 'profile-setup' | 'adoption' | 'home';
 
 const head = createHead();
 const queryClient = new QueryClient({
@@ -45,54 +43,19 @@ function BlobbiAppInner() {
   const { hasProfile, profile, isInitialLoading: isProfileLoading } = useCurrentUserBlobbonautProfile();
   const { blobbis: realBlobbis, isLoaded: areBlobbisLoaded, hasBlobbis } = useBlobbisLoaded();
 
-  const [appState, setAppState] = useState<AppState>('auth');
   const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
 
-  // Determine app state based on auth, profile, and Blobbis status
-  useEffect(() => {
-    console.log('[App Navigation] State check:', {
-      isInitialized,
-      isLoggedIn,
-      hasProfile,
-      isProfileLoading,
-      areBlobbisLoaded,
-      hasBlobbis,
-      realBlobbisCount: realBlobbis.length,
-      mockBlobbisCount: blobbis.length,
-    });
-
-    if (!isInitialized) {
-      console.log('[App Navigation] Waiting for auth initialization...');
-      return; // Wait for auth to initialize
-    }
-
-    if (!isLoggedIn) {
-      console.log('[App Navigation] Not logged in → AuthScreen');
-      setAppState('auth');
-    } else if (!hasProfile && !isProfileLoading) {
-      console.log('[App Navigation] Logged in but no profile → ProfileSetupScreen');
-      setAppState('profile-setup');
-    } else if (hasProfile && !areBlobbisLoaded) {
-      console.log('[App Navigation] Profile exists, waiting for Blobbis to load...');
-      // Wait for Blobbis to load before deciding
-      return;
-    } else if (hasProfile && areBlobbisLoaded && hasBlobbis) {
-      console.log('[App Navigation] Has profile and Blobbis → HomeScreen');
-      setAppState('home');
-    } else if (hasProfile && areBlobbisLoaded && !hasBlobbis) {
-      console.log('[App Navigation] Has profile but no Blobbis → AdoptionScreen');
-      setAppState('adoption');
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isInitialized, isLoggedIn, hasProfile, isProfileLoading, areBlobbisLoaded, hasBlobbis]); // Removed array lengths - they cause unnecessary re-renders
-
-  const handleLoginSuccess = () => {
-    // State will automatically transition via useEffect
-  };
-
-  const handleProfileComplete = () => {
-    // State will automatically transition via useEffect
-  };
+  // Log navigation state for debugging
+  console.log('[App Navigation] State check:', {
+    isInitialized,
+    isLoggedIn,
+    hasProfile,
+    isProfileLoading,
+    areBlobbisLoaded,
+    hasBlobbis,
+    realBlobbisCount: realBlobbis.length,
+    mockBlobbisCount: blobbis.length,
+  });
 
   const handleAdoption = (blobbiName: string) => {
     // Create a new egg blobbi with the given name
@@ -113,65 +76,98 @@ function BlobbiAppInner() {
     setBlobbis([]);
   };
 
-  // Show loading state while initializing
+  // ============================================================
+  // NAVIGATION DECISION TREE
+  // ============================================================
+  // This uses direct conditional rendering instead of state-based
+  // navigation to prevent flickering during auth rehydration
+  // ============================================================
+
+  // STEP 1: Auth is still initializing (rehydrating from localStorage)
   if (!isInitialized) {
+    console.log('[App Navigation] → AuthLoadingScreen (waiting for auth initialization)');
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-100 via-pink-100 to-blue-100 dark:from-[hsl(250,35%,8%)] dark:via-[hsl(260,40%,12%)] dark:to-[hsl(250,35%,10%)] p-4">
-        <Card className="w-full max-w-md shadow-2xl">
-          <CardContent className="py-12 space-y-4">
-            <div className="flex justify-center">
-              <Skeleton className="h-16 w-16 rounded-full" />
-            </div>
-            <Skeleton className="h-8 w-3/4 mx-auto" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-5/6 mx-auto" />
-          </CardContent>
-        </Card>
-      </div>
+      <>
+        <AuthLoadingScreen />
+        <Toaster />
+      </>
     );
   }
 
-  // Render the appropriate screen based on app state
-  switch (appState) {
-    case 'auth':
-      return (
-        <>
-          <AuthScreen onLoginSuccess={handleLoginSuccess} />
-          <Toaster />
-        </>
-      );
-
-    case 'profile-setup':
-      return (
-        <>
-          <ProfileSetupScreen onComplete={handleProfileComplete} />
-          <Toaster />
-        </>
-      );
-
-    case 'adoption':
-      return (
-        <>
-          <BlobbiAdoptionScreen onAdopt={handleAdoption} />
-          <Toaster />
-        </>
-      );
-
-    case 'home':
-      return (
-        <>
-          <HomeScreen
-            blobbis={blobbis}
-            userName={profile?.name || 'Blobbonaut'}
-            onLogout={handleLogout}
-          />
-          <Toaster />
-        </>
-      );
-
-    default:
-      return null;
+  // STEP 2: Auth initialized, but user is not logged in
+  if (!isLoggedIn) {
+    console.log('[App Navigation] → AuthScreen (user not logged in)');
+    return (
+      <>
+        <AuthScreen onLoginSuccess={() => {
+          console.log('[App Navigation] Login successful, state will update automatically');
+        }} />
+        <Toaster />
+      </>
+    );
   }
+
+  // From here on, user IS logged in
+  // Now we need to check profile and Blobbis status
+
+  // STEP 3: User is logged in, but profile is still loading
+  if (isProfileLoading) {
+    console.log('[App Navigation] → AppLoadingScreen (profile loading)');
+    return (
+      <>
+        <AppLoadingScreen />
+        <Toaster />
+      </>
+    );
+  }
+
+  // STEP 4: User is logged in, profile loaded, but no profile exists
+  if (!hasProfile) {
+    console.log('[App Navigation] → ProfileSetupScreen (no profile found)');
+    return (
+      <>
+        <ProfileSetupScreen onComplete={() => {
+          console.log('[App Navigation] Profile setup complete, state will update automatically');
+        }} />
+        <Toaster />
+      </>
+    );
+  }
+
+  // STEP 5: User has profile, but Blobbis are still loading
+  if (!areBlobbisLoaded) {
+    console.log('[App Navigation] → AppLoadingScreen (Blobbis loading)');
+    return (
+      <>
+        <AppLoadingScreen />
+        <Toaster />
+      </>
+    );
+  }
+
+  // STEP 6: User has profile, Blobbis loaded, but no Blobbis exist
+  if (!hasBlobbis) {
+    console.log('[App Navigation] → BlobbiAdoptionScreen (no Blobbis found)');
+    return (
+      <>
+        <BlobbiAdoptionScreen onAdopt={handleAdoption} />
+        <Toaster />
+      </>
+    );
+  }
+
+  // STEP 7: User has profile and Blobbis - show home screen
+  console.log('[App Navigation] → HomeScreen (all data loaded)');
+  return (
+    <>
+      <HomeScreen
+        blobbis={blobbis}
+        userName={profile?.name || 'Blobbonaut'}
+        onLogout={handleLogout}
+      />
+      <Toaster />
+    </>
+  );
 }
 
 export function App() {
