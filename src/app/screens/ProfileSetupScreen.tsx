@@ -10,7 +10,7 @@ import { selectDisplayName } from '@/lib/nostr-pet/metadata-kind0';
 import { Loader2 } from 'lucide-react';
 
 interface ProfileSetupScreenProps {
-  onComplete: () => void;
+  onComplete?: () => void; // Optional callback (not needed with direct rendering)
 }
 
 export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComplete }) => {
@@ -31,7 +31,8 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
   // If profile already exists, skip to next screen
   useEffect(() => {
     if (hasProfile && profile) {
-      onComplete();
+      console.log('[ProfileSetupScreen] Profile already exists, navigation will update automatically');
+      onComplete?.(); // Call optional callback if provided
     }
   }, [hasProfile, profile, onComplete]);
 
@@ -45,10 +46,12 @@ export const ProfileSetupScreen: React.FC<ProfileSetupScreenProps> = ({ onComple
     }
 
     try {
+      console.log('[ProfileSetupScreen] Creating profile with name:', name.trim());
       await createProfile({ name: name.trim() });
-      onComplete();
+      console.log('[ProfileSetupScreen] Profile created successfully');
+      onComplete?.(); // Call optional callback if provided
     } catch (err) {
-      console.error('Profile creation failed:', err);
+      console.error('[ProfileSetupScreen] ❌ Profile creation failed:', err);
       setError('Failed to create profile. Please try again.');
     }
   };

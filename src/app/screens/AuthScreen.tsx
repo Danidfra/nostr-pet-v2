@@ -6,7 +6,7 @@ import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
 import { Loader2 } from 'lucide-react';
 
 interface AuthScreenProps {
-  onLoginSuccess: () => void;
+  onLoginSuccess?: () => void; // Optional callback (not needed with direct rendering)
 }
 
 export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
@@ -14,10 +14,13 @@ export const AuthScreen: React.FC<AuthScreenProps> = ({ onLoginSuccess }) => {
 
   const handleLogin = async () => {
     try {
+      console.log('[AuthScreen] Login button clicked, calling login()...');
       await login();
-      onLoginSuccess();
+      console.log('[AuthScreen] Login completed successfully');
+      // Call optional callback if provided (for backwards compatibility)
+      onLoginSuccess?.();
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('[AuthScreen] ❌ Login failed:', error);
     }
   };
 

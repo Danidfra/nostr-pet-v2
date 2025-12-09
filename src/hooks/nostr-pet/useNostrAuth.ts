@@ -110,6 +110,14 @@ export const useNostrAuth = () => {
   const isLoggedIn = !!session;
   const hasNip07 = isNip07Available();
 
+  // DIAGNOSTIC: Log derived auth state whenever it changes
+  console.log('[Auth] Derived auth state:', {
+    isInitialized,
+    isLoggedIn,
+    pubkey: pubkey ? pubkey.slice(0, 8) + '...' : null,
+    sessionExists: !!session,
+  });
+
   // Session storage key for metadata
   const metadataSessionKey = useMemo(
     () => (pubkey ? getMetadataSessionKey(pubkey) : null),
@@ -250,11 +258,23 @@ export const useNostrAuth = () => {
       if (!newSession) {
         throw new Error('Login failed');
       }
+      console.log('[Auth] loginWithNostr returned session:', {
+        pubkey: newSession.pubkey.slice(0, 8) + '...',
+        hasRelays: newSession.relays.length > 0,
+      });
       return newSession;
     },
     onSuccess: async (newSession) => {
-      console.log('[Auth] ✅ Login successful, setting up session...');
+      console.log('[Auth] ✅ Login mutation onSuccess called');
+      console.log('[Auth] Setting session state with:', {
+        pubkey: newSession.pubkey.slice(0, 8) + '...',
+        createdAt: newSession.createdAt,
+        relays: newSession.relays.length,
+      });
+
       setSession(newSession);
+
+      console.log('[Auth] setSession called - state should update now');
 
       // Add login to NostrLoginProvider so useCurrentUser can access it
       // This synchronizes the two auth systems
@@ -294,7 +314,7 @@ export const useNostrAuth = () => {
       // This ensures Blobbis are loaded immediately after login
       queryClient.invalidateQueries({ queryKey: ['blobbi-status-list'] });
 
-      console.log('[Auth] ✅ Login complete - profile and Blobbi queries invalidated');
+      console.log('[Auth] ✅ Login complete - all setup finished, queries invalidated');
     },
     onError: (error) => {
       console.error('[Auth] ❌ Login failed:', error);

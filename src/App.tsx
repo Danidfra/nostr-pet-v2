@@ -99,9 +99,7 @@ function BlobbiAppInner() {
     console.log('[App Navigation] → AuthScreen (user not logged in)');
     return (
       <>
-        <AuthScreen onLoginSuccess={() => {
-          console.log('[App Navigation] Login successful, state will update automatically');
-        }} />
+        <AuthScreen />
         <Toaster />
       </>
     );
@@ -126,9 +124,7 @@ function BlobbiAppInner() {
     console.log('[App Navigation] → ProfileSetupScreen (no profile found)');
     return (
       <>
-        <ProfileSetupScreen onComplete={() => {
-          console.log('[App Navigation] Profile setup complete, state will update automatically');
-        }} />
+        <ProfileSetupScreen />
         <Toaster />
       </>
     );
