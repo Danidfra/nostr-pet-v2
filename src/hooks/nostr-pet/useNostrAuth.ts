@@ -71,6 +71,7 @@ export const useNostrAuth = () => {
     hasRehydratedRef.current = true;
 
     const rehydrate = () => {
+      console.log('[Auth] Starting session rehydration from localStorage...');
       const rehydratedSession = rehydrateSession();
       setSession(rehydratedSession);
 
@@ -88,13 +89,16 @@ export const useNostrAuth = () => {
           // This avoids triggering the NIP-07 permission popup
           const reconstructedLogin = new NLogin('extension', rehydratedSession.pubkey, null);
           addLogin(reconstructedLogin);
-          console.log('[useNostrAuth] Session rehydrated and login reconstructed (no NIP-07 call)');
+          console.log('[Auth] ✅ Session rehydrated and login reconstructed (no NIP-07 call)');
         } else {
-          console.log('[useNostrAuth] Session rehydrated, login already exists in provider');
+          console.log('[Auth] ✅ Session rehydrated, login already exists in provider');
         }
+      } else {
+        console.log('[Auth] ℹ️ No session to rehydrate (user not logged in)');
       }
 
       setIsInitialized(true);
+      console.log('[Auth] Initialization complete');
     };
 
     rehydrate();
@@ -135,6 +139,8 @@ export const useNostrAuth = () => {
       throw new Error('Not logged in or Nostr client not available');
     }
 
+    console.log('[Auth Metadata] Fetching metadata for pubkey:', pubkey.slice(0, 8) + '...');
+
     // Query for Kind 0 events by author
     const queryResult = await client.query({
       kind: METADATA_KIND,
@@ -146,24 +152,36 @@ export const useNostrAuth = () => {
       throw queryResult.error;
     }
 
-    const events = queryResult.data || [];
+    const allEvents = queryResult.data || [];
+    console.log('[Auth Metadata] Received events:', allEvents.length);
 
-    if (events.length === 0) {
+    // CRITICAL FIX: Filter events to only include Kind 0 (metadata) events
+    // This prevents Kind 31124 (Blobbi status) or other events from being parsed as metadata
+    const metadataEvents = allEvents.filter(event => event.kind === METADATA_KIND);
+    console.log('[Auth Metadata] Filtered Kind 0 events:', metadataEvents.length);
+
+    if (metadataEvents.length === 0) {
+      console.log('[Auth Metadata] No Kind 0 metadata events found');
       return null;
     }
 
     // Get the newest event by created_at
-    const newestEvent = getNewestMetadataEvent(events);
+    const newestEvent = getNewestMetadataEvent(metadataEvents);
     if (!newestEvent) {
+      console.warn('[Auth Metadata] Failed to get newest metadata event');
       return null;
     }
+
+    console.log('[Auth Metadata] Using newest event from:', new Date(newestEvent.created_at * 1000).toISOString());
 
     // Parse the event
     const metadata = parseMetadataFromEvent(newestEvent);
     if (!metadata) {
-      throw new Error('Failed to parse metadata event');
+      console.warn('[Auth Metadata] Failed to parse metadata event');
+      return null;
     }
 
+    console.log('[Auth Metadata] Metadata loaded successfully:', metadata.name || 'unnamed');
     return metadata;
   }, [client, nostr, pubkey]);
 
@@ -225,6 +243,7 @@ export const useNostrAuth = () => {
   // Login mutation
   const loginMutation = useMutation({
     mutationFn: async (): Promise<NostrSession> => {
+      console.log('[Auth] User clicked login - requesting NIP-07 permission...');
       // This is where we ACTUALLY call the extension and request permission
       // This should ONLY happen when the user explicitly clicks "Login"
       const newSession = await loginWithNostr();
@@ -234,6 +253,7 @@ export const useNostrAuth = () => {
       return newSession;
     },
     onSuccess: async (newSession) => {
+      console.log('[Auth] ✅ Login successful, setting up session...');
       setSession(newSession);
 
       // Add login to NostrLoginProvider so useCurrentUser can access it
@@ -250,17 +270,17 @@ export const useNostrAuth = () => {
           // This will trigger the NIP-07 permission popup (expected behavior)
           const login = await NLogin.fromExtension();
           addLogin(login);
-          console.log('[useNostrAuth] Login successful, NLogin created from extension');
+          console.log('[Auth] NLogin created from extension');
         } else {
-          console.log('[useNostrAuth] Login successful, using existing NLogin');
+          console.log('[Auth] Using existing NLogin');
         }
       } catch (error) {
-        console.error('[useNostrAuth] Failed to create login from extension:', error);
+        console.error('[Auth] Failed to create login from extension:', error);
         // Even if NLogin creation fails, we still have the session
         // Fallback: manually construct the login
         const fallbackLogin = new NLogin('extension', newSession.pubkey, null);
         addLogin(fallbackLogin);
-        console.log('[useNostrAuth] Fallback: manually constructed NLogin');
+        console.log('[Auth] Fallback: manually constructed NLogin');
       }
 
       // Invalidate metadata query to fetch new user's data
@@ -274,16 +294,17 @@ export const useNostrAuth = () => {
       // This ensures Blobbis are loaded immediately after login
       queryClient.invalidateQueries({ queryKey: ['blobbi-status-list'] });
 
-      console.log('[useNostrAuth] Login successful, profile and Blobbi queries invalidated');
+      console.log('[Auth] ✅ Login complete - profile and Blobbi queries invalidated');
     },
     onError: (error) => {
-      console.error('[useNostrAuth] Login failed:', error);
+      console.error('[Auth] ❌ Login failed:', error);
     },
   });
 
   // Logout mutation
   const logoutMutation = useMutation({
     mutationFn: async (): Promise<void> => {
+      console.log('[Auth] Logging out...');
       const success = logoutAuth();
       if (!success) {
         throw new Error('Logout failed');
@@ -311,10 +332,10 @@ export const useNostrAuth = () => {
       // Clear all Blobbi status queries
       queryClient.removeQueries({ queryKey: ['blobbi-status-list'] });
 
-      console.log('[useNostrAuth] Logout successful, all queries cleared');
+      console.log('[Auth] ✅ Logout successful - session cleared from localStorage, all queries cleared');
     },
     onError: (error) => {
-      console.error('[useNostrAuth] Logout failed:', error);
+      console.error('[Auth] ❌ Logout failed:', error);
     },
   });
 
