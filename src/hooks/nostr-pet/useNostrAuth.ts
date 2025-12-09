@@ -214,12 +214,23 @@ export const useNostrAuth = () => {
     saveCachedMetadata(metadata);
   }, [queryClient, pubkey, saveCachedMetadata]);
 
+  // Memoize subscription filters to prevent recreation
+  const metadataSubscriptionFilters = useMemo(() => {
+    if (!pubkey) return null;
+    return { authors: [pubkey] };
+  }, [pubkey]);
+
   // Set up real-time subscription for metadata
   useEffect(() => {
-    if (!client || !pubkey || !isInitialized) return;
+    if (!isInitialized || !metadataSubscriptionFilters) return;
 
     const subscriptionManager = getGlobalSubscriptionManager();
-    if (!subscriptionManager) return;
+    if (!subscriptionManager) {
+      console.warn('[Auth Metadata] Subscription manager not initialized');
+      return;
+    }
+
+    console.log('[Auth Metadata] 🔔 Setting up subscription for metadata updates');
 
     // Subscribe to metadata updates
     const unsubscribe = subscriptionManager.subscribeWithFilters(
@@ -241,12 +252,14 @@ export const useNostrAuth = () => {
           updateMetadataData(metadata);
         }
       },
-      { authors: [pubkey] }
+      metadataSubscriptionFilters
     );
 
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, pubkey, isInitialized]); // updateMetadataData and queryClient excluded - they're stable enough
+    return () => {
+      console.log('[Auth Metadata] 🔕 Cleaning up subscription');
+      unsubscribe();
+    };
+  }, [isInitialized, metadataSubscriptionFilters, pubkey, queryClient, updateMetadataData]);
 
   // Login mutation
   const loginMutation = useMutation({

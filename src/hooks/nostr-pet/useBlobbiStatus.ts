@@ -148,14 +148,23 @@ export const useMyBlobbis = () => {
     saveCachedStatusList(statusList);
   }, [queryClient, userPubkey, saveCachedStatusList]);
 
+  // Memoize subscription filters to prevent recreation
+  const subscriptionFilters = useMemo(() => {
+    if (!userPubkey) return null;
+    return { authors: [userPubkey] };
+  }, [userPubkey]);
+
   // Set up real-time subscription
   useEffect(() => {
-    if (!client || !userPubkey) return;
+    if (!subscriptionFilters) return;
 
     const subscriptionManager = getGlobalSubscriptionManager();
-    if (!subscriptionManager) return;
+    if (!subscriptionManager) {
+      console.warn('[Blobbi Status] Subscription manager not initialized');
+      return;
+    }
 
-    console.log('[Blobbi Status] Setting up subscription for user:', userPubkey.slice(0, 8) + '...');
+    console.log('[Blobbi Status] 🔔 Setting up subscription for user:', userPubkey?.slice(0, 8) + '...');
 
     // Subscribe to Blobbi status updates
     const unsubscribe = subscriptionManager.subscribeWithFilters(
@@ -200,12 +209,14 @@ export const useMyBlobbis = () => {
         // Update cache
         updateStatusListData(newList);
       },
-      { authors: [userPubkey] }
+      subscriptionFilters
     );
 
-    return unsubscribe;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [client, userPubkey]); // queryClient and updateStatusListData excluded - they're stable
+    return () => {
+      console.log('[Blobbi Status] 🔕 Cleaning up subscription');
+      unsubscribe();
+    };
+  }, [subscriptionFilters, userPubkey, queryClient, updateStatusListData]);
 
   // Computed values
   const blobbis = statusQuery.data || [];

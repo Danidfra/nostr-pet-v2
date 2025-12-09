@@ -5,6 +5,7 @@
  * querying, publishing, subscription management, and error handling.
  */
 
+import { useRef } from 'react';
 import type {
   NostrEvent,
   NostrFilter
@@ -366,12 +367,21 @@ export class NostrClient {
  */
 export const useNostrClient = (config?: NostrClientConfig): NostrClient | null => {
   const { nostr } = useNostr();
+  const clientRef = useRef<NostrClient | null>(null);
+  const nostrRef = useRef(nostr);
 
-  if (!nostr) {
-    return null;
+  // Update nostr ref
+  nostrRef.current = nostr;
+
+  // Only create client once, or when nostr instance actually changes
+  if (!clientRef.current && nostr) {
+    clientRef.current = new NostrClient(nostr, config);
+  } else if (clientRef.current && nostrRef.current !== nostr) {
+    // Nostr instance changed, recreate client
+    clientRef.current = nostr ? new NostrClient(nostr, config) : null;
   }
 
-  return new NostrClient(nostr, config);
+  return clientRef.current;
 };
 
 /**

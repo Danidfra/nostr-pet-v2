@@ -186,14 +186,29 @@ export const useBlobbonautProfile = (profileId?: string) => {
     saveCachedProfile(profile);
   }, [queryClient, effectiveProfileId, effectivePubkey, saveCachedProfile]);
 
+  // Memoize subscription filters to prevent recreation
+  const subscriptionFilters = useMemo(() => {
+    if (effectiveProfileId) {
+      return { '#d': [effectiveProfileId] };
+    }
+    if (effectivePubkey) {
+      return { authors: [effectivePubkey] };
+    }
+    return null;
+  }, [effectiveProfileId, effectivePubkey]);
+
   // Set up real-time subscription
   useEffect(() => {
-    // Only subscribe if we have a user (either from effectivePubkey or effectiveProfileId)
-    if (!client) return;
-    if (!effectivePubkey && !effectiveProfileId) return;
+    // Only subscribe if we have filters
+    if (!subscriptionFilters) return;
 
     const subscriptionManager = getGlobalSubscriptionManager();
-    if (!subscriptionManager) return;
+    if (!subscriptionManager) {
+      console.warn('[Profile Hook] Subscription manager not initialized');
+      return;
+    }
+
+    console.log('[Profile Hook] 🔔 Setting up subscription for profile updates');
 
     // Subscribe to profile updates
     const unsubscribe = subscriptionManager.subscribeWithFilters(
@@ -219,13 +234,14 @@ export const useBlobbonautProfile = (profileId?: string) => {
           }
         }
       },
-      effectiveProfileId
-        ? { '#d': [effectiveProfileId] }
-        : { authors: [effectivePubkey] }
+      subscriptionFilters
     );
 
-    return unsubscribe;
-  }, [client, effectivePubkey, effectiveProfileId, queryClient, updateProfileData]);
+    return () => {
+      console.log('[Profile Hook] 🔕 Cleaning up subscription');
+      unsubscribe();
+    };
+  }, [subscriptionFilters, effectiveProfileId, effectivePubkey, queryClient, updateProfileData]);
 
   // Mutation for updating profile
   const updateProfileMutation = useMutation({

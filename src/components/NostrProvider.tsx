@@ -3,6 +3,8 @@ import { NostrEvent, NostrFilter, NPool, NRelay1 } from '@nostrify/nostrify';
 import { NostrContext } from '@nostrify/react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAppContext } from '@/hooks/useAppContext';
+import { NostrClient } from '@/lib/nostr-pet/nostr/client';
+import { initializeGlobalSubscriptionManager } from '@/lib/nostr-pet/nostr/subscriptions';
 
 interface NostrProviderProps {
   children: React.ReactNode;
@@ -16,6 +18,7 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
 
   // Create NPool instance only once
   const pool = useRef<NPool | undefined>(undefined);
+  const subscriptionManagerInitialized = useRef(false);
 
   // Use refs so the pool always has the latest data
   const relayMetadata = useRef(config.relayMetadata);
@@ -57,6 +60,14 @@ const NostrProvider: React.FC<NostrProviderProps> = (props) => {
         return [...allRelays];
       },
     });
+
+    // Initialize global subscription manager once pool is created
+    if (!subscriptionManagerInitialized.current) {
+      const client = new NostrClient(pool.current);
+      initializeGlobalSubscriptionManager(client);
+      subscriptionManagerInitialized.current = true;
+      console.log('[NostrProvider] ✅ Global subscription manager initialized');
+    }
   }
 
   return (
