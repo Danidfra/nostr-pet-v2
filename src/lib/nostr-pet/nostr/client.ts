@@ -84,57 +84,90 @@ export class NostrClient {
   }
 
   /**
-   * Build a Nostr filter from a BlobbiFilter
+   * Build a Nostr filter from a BlobbiFilter or Nostrify-style filter
    *
    * CRITICAL FIX: Validates that filters are never empty to prevent subscribing to all events
+   * COMPATIBILITY FIX: Accepts both BlobbiFilter format and native Nostrify filter format
    */
-  private buildFilter(filter: BlobbiFilter): NostrFilter[] {
+  private buildFilter(filter: BlobbiFilter | Record<string, any>): NostrFilter[] {
     const nostrFilter: Record<string, string | number | string[] | number[]> = {};
 
-    // Handle kinds - REQUIRED for all filters
-    if (filter.kind) {
-      nostrFilter.kinds = Array.isArray(filter.kind) ? filter.kind : [filter.kind];
-    } else {
-      throw new Error('CRITICAL: Filter must include at least a kind. Empty filters would subscribe to all events.');
+    // COMPATIBILITY FIX: Handle both "kind" (BlobbiFilter) and "kinds" (Nostrify) formats
+    // Step 1: Extract kinds - REQUIRED for all filters
+    let kindsArray: number[] | undefined;
+
+    if ('kinds' in filter && filter.kinds) {
+      // Nostrify-style: { kinds: [31125] }
+      kindsArray = Array.isArray(filter.kinds) ? filter.kinds : [filter.kinds as number];
+    } else if ('kind' in filter && filter.kind) {
+      // BlobbiFilter-style: { kind: 31125 } or { kind: [31125] }
+      kindsArray = Array.isArray(filter.kind) ? filter.kind : [filter.kind];
     }
 
-    // Handle authors
-    if (filter.author) {
-      nostrFilter.authors = [filter.author];
+    if (!kindsArray || kindsArray.length === 0) {
+      throw new Error('CRITICAL: Filter must include at least one kind. Empty filters would subscribe to all events.');
     }
 
-    // Handle tags
-    if (filter.tags) {
+    nostrFilter.kinds = kindsArray;
+
+    // COMPATIBILITY FIX: Handle both "author" (singular) and "authors" (plural) formats
+    if ('authors' in filter && filter.authors) {
+      // Nostrify-style: { authors: ["pubkey1", "pubkey2"] }
+      nostrFilter.authors = Array.isArray(filter.authors) ? filter.authors : [filter.authors as string];
+    } else if ('author' in filter && filter.author) {
+      // BlobbiFilter-style: { author: "pubkey" }
+      nostrFilter.authors = [filter.author as string];
+    }
+
+    // COMPATIBILITY FIX: Handle both tag formats
+    // Format 1: BlobbiFilter tags object { tags: { d: "value", t: "blobbi" } }
+    if ('tags' in filter && filter.tags && typeof filter.tags === 'object') {
       for (const [tagName, tagValue] of Object.entries(filter.tags)) {
         const key = `#${tagName}`;
         if (Array.isArray(tagValue)) {
           nostrFilter[key] = tagValue;
         } else {
-          nostrFilter[key] = [tagValue];
+          nostrFilter[key] = [tagValue as string];
         }
       }
     }
 
-    // Handle pagination
-    if (filter.limit) {
+    // Format 2: Nostrify-style tags { "#d": ["value"], "#t": ["blobbi"] }
+    for (const [key, value] of Object.entries(filter)) {
+      if (key.startsWith('#')) {
+        // This is a tag filter like "#d", "#p", "#t", etc.
+        if (Array.isArray(value)) {
+          nostrFilter[key] = value;
+        } else if (value) {
+          nostrFilter[key] = [value as string];
+        }
+      }
+    }
+
+    // Handle pagination - support both formats
+    if ('limit' in filter && typeof filter.limit === 'number') {
       nostrFilter.limit = filter.limit;
     }
-    if (filter.since) {
+    if ('since' in filter && typeof filter.since === 'number') {
       nostrFilter.since = filter.since;
     }
-    if (filter.until) {
+    if ('until' in filter && typeof filter.until === 'number') {
       nostrFilter.until = filter.until;
     }
 
     // CRITICAL VALIDATION: Ensure filter is not empty
-    // A filter must have at least kinds, or kinds + other properties
+    // A filter must have at least kinds (which we already validated above)
     if (Object.keys(nostrFilter).length === 0) {
       throw new Error('CRITICAL: Cannot create empty filter. Filters must include at least kinds, authors, or tags.');
     }
 
-    // Additional validation: ensure kinds is not an empty array
+    // Additional validation: ensure kinds is not an empty array (already checked above, but double-check)
     if (Array.isArray(nostrFilter.kinds) && nostrFilter.kinds.length === 0) {
       throw new Error('CRITICAL: kinds array cannot be empty');
+    }
+
+    if (this.config.debug) {
+      console.log('[NostrClient] Built filter:', nostrFilter);
     }
 
     return [nostrFilter as NostrFilter];
