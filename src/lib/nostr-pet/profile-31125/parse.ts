@@ -125,6 +125,13 @@ export const validateBlobbonautProfileEvent = (event: NostrEvent): ProfileValida
  * - Default value application
  */
 export const parseBlobbonautProfileFromEvent = (event: NostrEvent): BlobbonautProfile | null => {
+  // Guard: Only parse kind 31125 events
+  // Non-31125 events should be filtered out before calling this function
+  if (event.kind !== BLOBBONAUT_PROFILE_KIND) {
+    // Silently ignore non-profile events - they should not reach this parser
+    return null;
+  }
+
   // Validate event first
   const validation = validateBlobbonautProfileEvent(event);
   if (!validation.isValid) {

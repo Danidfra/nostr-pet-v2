@@ -187,14 +187,18 @@ export const useBlobbonautProfile = (profileId?: string) => {
   }, [queryClient, effectiveProfileId, effectivePubkey, saveCachedProfile]);
 
   // Memoize subscription filters to prevent recreation
+  // These filters are ALWAYS combined with kind: 31125 by the subscription manager
   const subscriptionFilters = useMemo(() => {
+    const baseFilters: Record<string, string[]> = {};
+
     if (effectiveProfileId) {
-      return { '#d': [effectiveProfileId] };
+      baseFilters['#d'] = [effectiveProfileId];
     }
     if (effectivePubkey) {
-      return { authors: [effectivePubkey] };
+      baseFilters.authors = [effectivePubkey];
     }
-    return null;
+
+    return Object.keys(baseFilters).length > 0 ? baseFilters : null;
   }, [effectiveProfileId, effectivePubkey]);
 
   // Set up real-time subscription
@@ -214,6 +218,12 @@ export const useBlobbonautProfile = (profileId?: string) => {
     const unsubscribe = subscriptionManager.subscribeWithFilters(
       BLOBBONAUT_PROFILE_KIND,
       (event) => {
+        // Guard: Only process kind 31125 events
+        // This prevents parsing errors for non-profile events that may come through
+        if (event.kind !== BLOBBONAUT_PROFILE_KIND) {
+          return;
+        }
+
         // Parse incoming event
         const profile = parseBlobbonautProfileFromEvent(event);
         if (!profile) return;

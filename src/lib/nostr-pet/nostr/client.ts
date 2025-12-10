@@ -287,6 +287,9 @@ export class NostrClient {
 
     const nostrFilter = this.buildFilter(filter);
 
+    // Extract expected kinds for validation
+    const expectedKinds = Array.isArray(filter.kind) ? filter.kind : [filter.kind];
+
     // Create subscription
     const subscription = this.nostr.req(nostrFilter);
 
@@ -296,6 +299,16 @@ export class NostrClient {
         for await (const message of subscription) {
           if (message[0] === 'EVENT') {
             const event = message[2] as NostrEvent;
+
+            // Guard: Only process events with expected kinds
+            // This prevents processing events with wrong kinds from misbehaving relays
+            if (!expectedKinds.includes(event.kind)) {
+              if (this.config.debug) {
+                console.warn(`[NostrClient] Ignoring event with unexpected kind ${event.kind}, expected ${expectedKinds.join(', ')}`);
+              }
+              continue;
+            }
+
             try {
               listener(event);
             } catch (error) {

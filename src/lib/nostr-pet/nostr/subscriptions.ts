@@ -181,6 +181,15 @@ export class SubscriptionManager {
    * Handle incoming events and distribute to listeners
    */
   private handleEvent(kind: number, event: NostrEvent): void {
+    // Guard: Verify the event kind matches what we expect
+    // This prevents processing events with wrong kinds that may come through the subscription
+    if (event.kind !== kind) {
+      if (this.debug) {
+        console.warn(`[SubscriptionManager] Event kind mismatch: expected ${kind}, got ${event.kind}`);
+      }
+      return;
+    }
+
     // Find all subscriptions for this kind
     for (const [key, subscription] of this.subscriptions.entries()) {
       if (subscription.config.kind === kind) {
