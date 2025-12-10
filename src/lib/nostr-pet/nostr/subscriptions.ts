@@ -3,6 +3,9 @@
  *
  * Centralizes all real-time subscriptions to avoid duplicate connections
  * and provides efficient event distribution to registered listeners.
+ * 
+ * CRITICAL FIX: This file has been updated to prevent empty filter subscriptions
+ * that were causing massive CPU usage and infinite event streams.
  */
 
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -64,9 +67,16 @@ export class SubscriptionManager {
 
     // Create subscription if it doesn't exist
     if (!subscription) {
+      // CRITICAL FIX: Ensure filters are never empty
+      // Filters must be provided in config or we throw an error
+      if (!config?.filters || Object.keys(config.filters).length === 0) {
+        console.error(`[SubscriptionManager] CRITICAL: Empty filters provided for kind ${kind}. Filters are required.`);
+        throw new Error(`CRITICAL: Empty filters provided for kind ${kind}. Subscriptions must have explicit filters (authors, #d, #t, etc.) to prevent subscribing to all events.`);
+      }
+
       const fullConfig: SubscriptionConfig = {
         kind,
-        filters: {},
+        filters: config.filters,
         autoStart: true,
         ...config,
       } as SubscriptionConfig;
@@ -98,7 +108,27 @@ export class SubscriptionManager {
     filters: Record<string, any>
   ): () => void {
     if (this.debug) {
-      console.log(`[SubscriptionManager] Adding filtered listener for kind ${kind}`);
+      console.log(`[SubscriptionManager] Adding filtered listener for kind ${kind}`, filters);
+    }
+
+    // CRITICAL FIX: Validate filters to prevent empty REQ subscriptions
+    // Empty filters would subscribe to ALL events from the relay (the entire firehose)
+    if (!filters || Object.keys(filters).length === 0) {
+      console.error(`[SubscriptionManager] CRITICAL: Empty filters provided for kind ${kind}. This would subscribe to all events!`);
+      throw new Error(`CRITICAL: Empty filters provided for kind ${kind}. Filters must include at least one of: authors, #d, #t, etc. Empty filters would subscribe to the entire relay firehose.`);
+    }
+
+    // Additional validation: ensure filters have meaningful values
+    const hasValidFilter = Object.entries(filters).some(([key, value]) => {
+      if (Array.isArray(value)) {
+        return value.length > 0; // Arrays must not be empty
+      }
+      return value !== undefined && value !== null && value !== '';
+    });
+
+    if (!hasValidFilter) {
+      console.error(`[SubscriptionManager] CRITICAL: All filter values are empty for kind ${kind}`, filters);
+      throw new Error(`CRITICAL: All filter values are empty for kind ${kind}. Filters must have non-empty values.`);
     }
 
     // Create unique key for filtered subscription
@@ -150,12 +180,21 @@ export class SubscriptionManager {
    * Create a new subscription
    */
   private createSubscription(config: SubscriptionConfig): ActiveSubscription {
+    // CRITICAL FIX: Validate that filters are not empty before creating subscription
+    if (!config.filters || Object.keys(config.filters).length === 0) {
+      throw new Error(`CRITICAL: Cannot create subscription for kind ${config.kind} with empty filters`);
+    }
+
     // Build filter for subscription
     const filter = {
       kinds: [config.kind],
       ...config.filters,
-      limit: 0, // No limit for subscriptions
+      limit: 0, // No limit for subscriptions (real-time updates)
     };
+
+    if (this.debug) {
+      console.log(`[SubscriptionManager] Creating subscription with filter:`, filter);
+    }
 
     // Create subscription
     const subscription = this.client.createSubscription(filter, (event) => {
@@ -334,10 +373,12 @@ export const getGlobalSubscriptionManager = (): SubscriptionManager | null => {
 
 /**
  * Subscribe to Blobbonaut Profile events (kind 31125)
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToBlobbonautProfiles = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -345,15 +386,23 @@ export const subscribeToBlobbonautProfiles = (
     return null;
   }
 
-  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.BLOBBONAUT_PROFILE, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToBlobbonautProfiles called with empty filters');
+    throw new Error('subscribeToBlobbonautProfiles requires explicit filters (e.g., authors: [pubkey])');
+  }
+
+  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.BLOBBONAUT_PROFILE, listener, filters);
 };
 
 /**
  * Subscribe to Blobbi State events (kind 31124)
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToBlobbiStates = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -361,15 +410,23 @@ export const subscribeToBlobbiStates = (
     return null;
   }
 
-  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.STATE, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToBlobbiStates called with empty filters');
+    throw new Error('subscribeToBlobbiStates requires explicit filters (e.g., authors: [pubkey])');
+  }
+
+  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.STATE, listener, filters);
 };
 
 /**
  * Subscribe to Blobbi Interaction events (kind 14919)
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToBlobbiInteractions = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -377,15 +434,23 @@ export const subscribeToBlobbiInteractions = (
     return null;
   }
 
-  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.INTERACTION, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToBlobbiInteractions called with empty filters');
+    throw new Error('subscribeToBlobbiInteractions requires explicit filters (e.g., authors: [pubkey])');
+  }
+
+  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.INTERACTION, listener, filters);
 };
 
 /**
  * Subscribe to Blobbi Breeding events (kind 14920)
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToBlobbiBreeding = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -393,15 +458,23 @@ export const subscribeToBlobbiBreeding = (
     return null;
   }
 
-  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.BREEDING, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToBlobbiBreeding called with empty filters');
+    throw new Error('subscribeToBlobbiBreeding requires explicit filters (e.g., authors: [pubkey])');
+  }
+
+  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.BREEDING, listener, filters);
 };
 
 /**
  * Subscribe to Blobbi Record events (kind 14921)
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToBlobbiRecords = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -409,29 +482,50 @@ export const subscribeToBlobbiRecords = (
     return null;
   }
 
-  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.RECORD, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToBlobbiRecords called with empty filters');
+    throw new Error('subscribeToBlobbiRecords requires explicit filters (e.g., authors: [pubkey])');
+  }
+
+  return manager.subscribeWithFilters(BLOBBI_EVENT_KINDS.RECORD, listener, filters);
 };
 
 /**
  * Subscribe to all Blobbi events
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
+ * DEPRECATED: This function is too broad and should not be used
  */
 export const subscribeToAllBlobbiEvents = (
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
+  console.warn('[SubscriptionManager] WARNING: subscribeToAllBlobbiEvents is deprecated and should be avoided');
+  
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
     console.warn('[SubscriptionManager] Global subscription manager not initialized');
     return null;
+  }
+
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error('[SubscriptionManager] CRITICAL: subscribeToAllBlobbiEvents called with empty filters');
+    throw new Error('subscribeToAllBlobbiEvents requires explicit filters (e.g., authors: [pubkey])');
   }
 
   const unsubscribes: (() => void)[] = [];
 
   // Subscribe to all kinds
   for (const kind of Object.values(BLOBBI_EVENT_KINDS)) {
-    const unsubscribe = manager.subscribeWithFilters(kind, listener, filters || {});
-    if (unsubscribe) {
-      unsubscribes.push(unsubscribe);
+    try {
+      const unsubscribe = manager.subscribeWithFilters(kind, listener, filters);
+      if (unsubscribe) {
+        unsubscribes.push(unsubscribe);
+      }
+    } catch (error) {
+      console.error(`[SubscriptionManager] Failed to subscribe to kind ${kind}:`, error);
     }
   }
 
@@ -445,11 +539,13 @@ export const subscribeToAllBlobbiEvents = (
 
 /**
  * Generic subscription function for any kind
+ * 
+ * CRITICAL FIX: Filters are now required and cannot be empty
  */
 export const subscribeToKind = (
   kind: typeof BLOBBI_EVENT_KINDS[keyof typeof BLOBBI_EVENT_KINDS],
   listener: SubscriptionListener,
-  filters?: Record<string, any>
+  filters: Record<string, any>
 ): (() => void) | null => {
   const manager = getGlobalSubscriptionManager();
   if (!manager) {
@@ -457,5 +553,11 @@ export const subscribeToKind = (
     return null;
   }
 
-  return manager.subscribeWithFilters(kind, listener, filters || {});
+  // CRITICAL FIX: Ensure filters are provided
+  if (!filters || Object.keys(filters).length === 0) {
+    console.error(`[SubscriptionManager] CRITICAL: subscribeToKind called with empty filters for kind ${kind}`);
+    throw new Error(`subscribeToKind for kind ${kind} requires explicit filters (e.g., authors: [pubkey])`);
+  }
+
+  return manager.subscribeWithFilters(kind, listener, filters);
 };

@@ -85,18 +85,22 @@ export class NostrClient {
 
   /**
    * Build a Nostr filter from a BlobbiFilter
+   *
+   * CRITICAL FIX: Validates that filters are never empty to prevent subscribing to all events
    */
   private buildFilter(filter: BlobbiFilter): NostrFilter[] {
     const nostrFilter: Record<string, string | number | string[] | number[]> = {};
 
+    // Handle kinds - REQUIRED for all filters
+    if (filter.kind) {
+      nostrFilter.kinds = Array.isArray(filter.kind) ? filter.kind : [filter.kind];
+    } else {
+      throw new Error('CRITICAL: Filter must include at least a kind. Empty filters would subscribe to all events.');
+    }
+
     // Handle authors
     if (filter.author) {
       nostrFilter.authors = [filter.author];
-    }
-
-    // Handle kinds
-    if (filter.kind) {
-      nostrFilter.kinds = Array.isArray(filter.kind) ? filter.kind : [filter.kind];
     }
 
     // Handle tags
@@ -120,6 +124,17 @@ export class NostrClient {
     }
     if (filter.until) {
       nostrFilter.until = filter.until;
+    }
+
+    // CRITICAL VALIDATION: Ensure filter is not empty
+    // A filter must have at least kinds, or kinds + other properties
+    if (Object.keys(nostrFilter).length === 0) {
+      throw new Error('CRITICAL: Cannot create empty filter. Filters must include at least kinds, authors, or tags.');
+    }
+
+    // Additional validation: ensure kinds is not an empty array
+    if (Array.isArray(nostrFilter.kinds) && nostrFilter.kinds.length === 0) {
+      throw new Error('CRITICAL: kinds array cannot be empty');
     }
 
     return [nostrFilter as NostrFilter];
