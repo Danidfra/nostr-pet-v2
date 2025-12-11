@@ -339,35 +339,39 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const handleUseItemFromModal = async (itemId: string, quantity: number) => {
     if (!currentBlobbi) return;
 
-    // For now, we'll use items one at a time in a loop
-    // In the future, the interaction system could be updated to support quantity
-    for (let i = 0; i < quantity; i++) {
-      const itemDef = getItemDefinition(itemId);
-      if (!itemDef) continue;
+    const itemDef = getItemDefinition(itemId);
+    if (!itemDef) {
+      toast({
+        title: 'Error',
+        description: 'Item not found',
+        variant: 'destructive',
+      });
+      return;
+    }
 
-      const action: BlobbiAction =
-        itemDef.category === 'food' ? 'feed' :
-        itemDef.category === 'toy' ? 'play' :
-        itemDef.category === 'medicine' ? 'medicine' :
-        itemDef.category === 'hygiene' ? 'clean' : 'feed';
+    // Determine action from item category
+    const action: BlobbiAction =
+      itemDef.category === 'food' ? 'feed' :
+      itemDef.category === 'toy' ? 'play' :
+      itemDef.category === 'medicine' ? 'medicine' :
+      itemDef.category === 'hygiene' ? 'clean' : 'feed';
 
-      const result = await interact({ action, itemId });
+    // Use the new v2 system with quantity support
+    const result = await interact({ action, itemId, itemQuantity: quantity });
 
-      if (!result.success) {
-        toast({
-          title: 'Error',
-          description: result.error || 'Failed to use item',
-          variant: 'destructive',
-        });
-        return; // Stop on first error
-      }
+    if (!result.success) {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to use item',
+        variant: 'destructive',
+      });
+      return;
     }
 
     // Success! Show toast
-    const itemDef = getItemDefinition(itemId);
     toast({
       title: 'Success!',
-      description: `${currentBlobbi.name} used ${quantity}x ${itemDef?.displayName}!`,
+      description: `${currentBlobbi.name} used ${quantity}x ${itemDef.displayName}!`,
     });
 
     // Close both modals

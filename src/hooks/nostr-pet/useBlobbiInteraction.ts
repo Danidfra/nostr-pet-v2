@@ -1,18 +1,19 @@
 /**
  * Hook for Blobbi interactions with optimistic updates
- * 
+ *
  * Handles:
  * - Computing new stats using interaction logic
  * - Optimistic updates to Blobbi status in React Query cache
  * - Optimistic inventory decrements in profile cache
- * - Publishing kind 14919 interaction events
+ * - Publishing kind 14919 v2 interaction events
+ * - Full 3-event flow: 31125 → 14919 → 31124
  * - Rollback on failure
  */
 
 import { useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
-import { useNostrClient } from '@/lib/nostr-pet/nostr/client';
+import { useNostr } from '@nostrify/react';
 import { useBlobbi } from './useBlobbiStatus';
 import { useBlobbonautProfile } from './useBlobbonautProfile';
 import type { BlobbiStatus } from '@/lib/nostr-pet/status-31124/types';
@@ -24,7 +25,7 @@ import {
   getInteractionRewards,
   type BlobbiAction,
 } from '@/lib/blobbi-interaction-logic';
-import { publishBlobbiInteraction } from '@/lib/nostr-pet/interaction-14919';
+import { executeInteractionFlow } from '@/lib/nostr-pet/interaction-flow';
 import { getItemDefinition } from '@/lib/blobbi-items';
 
 /**
@@ -33,6 +34,7 @@ import { getItemDefinition } from '@/lib/blobbi-items';
 export interface InteractParams {
   action: BlobbiAction;
   itemId?: string;
+  itemQuantity?: number;
 }
 
 /**
@@ -50,17 +52,17 @@ export interface InteractResult {
 export const useBlobbiInteraction = (blobbiId: string) => {
   const queryClient = useQueryClient();
   const { user } = useCurrentUser();
-  const client = useNostrClient();
+  const { nostr } = useNostr();
   const { blobbi, isLoading } = useBlobbi(blobbiId);
   const { profile } = useBlobbonautProfile();
 
   /**
-   * Perform an interaction with optimistic updates
+   * Perform an interaction with optimistic updates and full v2 flow
    */
   const interact = useCallback(async (
     params: InteractParams
   ): Promise<InteractResult> => {
-    const { action, itemId } = params;
+    const { action, itemId, itemQuantity = 1 } = params;
 
     // Validation: Must have user
     if (!user) {
@@ -70,8 +72,8 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       };
     }
 
-    // Validation: Must have client
-    if (!client) {
+    // Validation: Must have nostr
+    if (!nostr) {
       return {
         success: false,
         error: 'Nostr client not available',
@@ -97,7 +99,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     // Validation: If item provided, check compatibility and availability
     if (itemId) {
       const itemDef = getItemDefinition(itemId);
-      
+
       if (!itemDef) {
         return {
           success: false,
@@ -116,10 +118,10 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       // Check inventory (if profile available)
       if (profile) {
         const storageItem = profile.storage?.find(s => s.itemId === itemId);
-        if (!storageItem || storageItem.quantity <= 0) {
+        if (!storageItem || storageItem.quantity < itemQuantity) {
           return {
             success: false,
-            error: `You don't have any ${itemDef.displayName}`,
+            error: `You don't have enough ${itemDef.displayName}. Need ${itemQuantity}, have ${storageItem?.quantity || 0}`,
           };
         }
       }
@@ -134,7 +136,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     }
 
     try {
-      // 1. Compute new stats
+      // 1. Compute new stats for optimistic update
       const statChanges = applyBlobbiInteraction(
         blobbi,
         blobbi.stage,
@@ -145,9 +147,21 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       // Get rewards
       const rewards = getInteractionRewards(action);
 
+      // Multiply stat changes by quantity
+      const multipliedStatChanges: Partial<BlobbiStatus> = {};
+      Object.entries(statChanges).forEach(([key, value]) => {
+        if (typeof value === 'number') {
+          const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
+          const currentNum = typeof currentValue === 'number' ? currentValue : 0;
+          const delta = value - currentNum;
+          const newValue = currentNum + (delta * itemQuantity);
+          (multipliedStatChanges as Record<string, number>)[key] = newValue;
+        }
+      });
+
       // Combine stat changes with rewards
       const newStats: Partial<BlobbiStatus> = {
-        ...statChanges,
+        ...multipliedStatChanges,
         experience: blobbi.experience + rewards.experience,
         careStreak: blobbi.careStreak + rewards.carePoints,
         lastInteraction: Math.floor(Date.now() / 1000),
@@ -159,10 +173,8 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       if (action === 'clean') newStats.lastClean = now;
       if (action === 'medicine') newStats.lastMedicine = now;
       if (action === 'warm') newStats.lastWarm = now;
-      if (action === 'check') newStats.lastCheck = now;
       if (action === 'sing') newStats.lastSing = now;
-      if (action === 'talk') newStats.lastTalk = now;
-      
+
       // Handle sleep state changes
       if (action === 'rest') {
         newStats.isSleeping = true;
@@ -179,9 +191,9 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       // 2. Optimistically update Blobbi status in cache
       const statusQueryKey = ['blobbi-status-list', user.pubkey];
       const previousStatusList = queryClient.getQueryData<BlobbiStatus[]>(statusQueryKey);
-      
+
       if (previousStatusList) {
-        const updatedList = previousStatusList.map(b => 
+        const updatedList = previousStatusList.map(b =>
           b.id === blobbiId ? { ...b, ...newStats } : b
         );
         queryClient.setQueryData(statusQueryKey, updatedList);
@@ -192,14 +204,14 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       if (itemId && profile) {
         const profileQueryKey = ['blobbonaut-profile', null, user.pubkey];
         previousProfile = queryClient.getQueryData<BlobbonautProfile>(profileQueryKey);
-        
+
         if (previousProfile) {
           // Decrement item quantity
           const updatedStorage: StorageItem[] = (previousProfile.storage || []).map(item => {
             if (item.itemId === itemId) {
               return {
                 ...item,
-                quantity: Math.max(0, item.quantity - 1),
+                quantity: Math.max(0, item.quantity - itemQuantity),
               };
             }
             return item;
@@ -215,19 +227,20 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         }
       }
 
-      // 4. Publish kind 14919 interaction event
-      const publishResult = await publishBlobbiInteraction(
-        client,
+      // 4. Execute full v2 interaction flow (31125 → 14919 → 31124)
+      const flowResult = await executeInteractionFlow(
+        nostr,
         {
-          blobbiId,
+          blobbi,
           action,
           itemId,
-          lifeStage: blobbi.stage,
+          itemQuantity,
+          profile: profile || undefined,
         },
         user.pubkey
       );
 
-      if (!publishResult.success) {
+      if (!flowResult.success) {
         // Rollback optimistic updates on failure
         if (previousStatusList) {
           queryClient.setQueryData(statusQueryKey, previousStatusList);
@@ -239,14 +252,14 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
         return {
           success: false,
-          error: publishResult.error || 'Failed to publish interaction',
+          error: flowResult.error || 'Failed to execute interaction flow',
         };
       }
 
       // Success!
       return {
         success: true,
-        newStats,
+        newStats: flowResult.newStats || newStats,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -255,15 +268,15 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         error: errorMessage,
       };
     }
-  }, [user, client, blobbi, profile, blobbiId, queryClient]);
+  }, [user, nostr, blobbi, profile, blobbiId, queryClient]);
 
   return {
     blobbi,
     isLoading,
     interact,
-    
+
     // Status flags
-    canInteract: !!user && !!client && !!blobbi,
+    canInteract: !!user && !!nostr && !!blobbi,
     isReady: !isLoading && !!blobbi,
   };
 };

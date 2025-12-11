@@ -20,6 +20,7 @@ export type BlobbiAction =
   | 'play'
   | 'rest'
   | 'wake'
+  | 'breed'
   // Egg-only actions
   | 'warm'
   | 'check'
@@ -54,6 +55,9 @@ const BASE_INTERACTION_EFFECTS: Record<BlobbiAction, Partial<BlobbiStatus>> = {
   },
   wake: {
     // Wake happiness depends on energy level (handled in applyBlobbiInteraction)
+  },
+  breed: {
+    // Breed is a stub for now
   },
 
   // Egg-only actions
@@ -194,7 +198,7 @@ export const isActionValidForStage = (
   }
 
   // Baby/Adult actions
-  const babyAdultActions: BlobbiAction[] = ['feed', 'play', 'rest', 'wake'];
+  const babyAdultActions: BlobbiAction[] = ['feed', 'play', 'rest', 'wake', 'breed'];
   if (babyAdultActions.includes(action)) {
     return lifeStage === 'baby' || lifeStage === 'adult';
   }

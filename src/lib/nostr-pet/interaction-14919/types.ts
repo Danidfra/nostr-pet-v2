@@ -5,9 +5,12 @@
 import type { NostrEvent } from '@nostrify/nostrify';
 import type { BlobbiAction } from '@/lib/blobbi-interaction-logic';
 
+// Re-export for convenience
+export type { BlobbiAction };
+
 /**
  * Blobbi Interaction Event (Kind 14919)
- * 
+ *
  * Immutable events that record interactions with Blobbis.
  * These events trigger state updates in Kind 31124.
  */

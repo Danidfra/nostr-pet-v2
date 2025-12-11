@@ -25,6 +25,30 @@ export * from './metadata-kind0';
 // Blobbonaut Profile (Kind 31125) - Complete implementation
 export * from './profile-31125';
 
+// Blobbi Interaction (Kind 14919) - v1 and v2 support
+export * from './interaction-14919';
+export {
+  type BlobbiInteractionV2,
+  type BlobbiStatChange,
+  type BlobbiActionCategory,
+  type BlobbiStatName,
+  type CreateInteractionV2Params,
+  INTERACTION_V2_TAG_NAMES,
+  INTERACTION_V2_ECOSYSTEM_TAGS,
+  INTERACTION_V2_DEFAULTS,
+  ACTION_CATEGORY_MAP,
+  mapActionToCategory,
+  formatStatChange,
+  parseStatChange,
+  isActionValidForStage as isActionValidForStageV2,
+  buildInteractionV2Event,
+  parseBlobbiInteractionV2FromEvent,
+  isInteractionV2Event,
+} from './interaction-14919-v2';
+
+// Interaction flow orchestration
+export * from './interaction-flow';
+
 // React hooks
 export * from '../../hooks/nostr-pet/useBlobbonautProfile';
 export * from '../../hooks/nostr-pet/useNostrAuth';
