@@ -53,6 +53,10 @@ import {
 import { useToast } from '@/hooks/useToast';
 import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
+import { useBlobbonautInventory } from '@/hooks/nostr-pet/useBlobbonautInventory';
+import { useBlobbiInteraction } from '@/hooks/nostr-pet/useBlobbiInteraction';
+import { getItemDefinition, type BlobbiItemCategory } from '@/lib/blobbi-items';
+import type { BlobbiAction } from '@/lib/blobbi-interaction-logic';
 
 // MiniBlobbiAvatar component - Reusable mini Blobbi graphic for avatars
 interface MiniBlobbiAvatarProps {
@@ -155,6 +159,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isBlobbiSelectorOpen, setIsBlobbiSelectorOpen] = useState(false);
   const { toast } = useToast();
+
+  // Get inventory data
+  const { availableItems, isLoading: inventoryLoading } = useBlobbonautInventory();
+
+  // Get interaction hook for current Blobbi
+  const { interact, isLoading: isInteracting } = useBlobbiInteraction(blobbis[currentBlobbiIndex]?.id || '');
 
   // Loading state
   if (isInitialLoading) {
@@ -282,7 +292,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     setCurrentRoom(ROOMS[nextIndex]);
   };
 
-  // Actions
+  // Actions - Updated to use real interaction system
+  const handleInteraction = async (action: BlobbiAction, itemId?: string) => {
+    if (!currentBlobbi) return;
+
+    const result = await interact({ action, itemId });
+
+    if (result.success) {
+      const itemName = itemId ? getItemDefinition(itemId)?.displayName : '';
+
+      toast({
+        title: 'Success!',
+        description: `${currentBlobbi.name} ${action === 'feed' ? 'ate' : action === 'play' ? 'played with' : 'used'} ${itemName || 'interaction'}!`,
+      });
+
+      // Close actions panel after successful interaction
+      setIsActionsOpen(false);
+    } else {
+      toast({
+        title: 'Error',
+        description: result.error || 'Failed to perform interaction',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  // Legacy action handler for non-item interactions
   const handleAction = (action: string, effect?: () => void) => {
     if (effect) effect();
     toast({
@@ -369,21 +404,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         return (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => handleAction('Warmed the egg')}
+              onClick={() => handleInteraction('warm')}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
               <Thermometer className="h-5 w-5" />
               <span className="text-xs">Warm</span>
             </Button>
             <Button
-              onClick={() => handleAction('Sang to the egg')}
+              onClick={() => handleInteraction('sing')}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600"
             >
               <Music className="h-5 w-5" />
               <span className="text-xs">Sing</span>
             </Button>
             <Button
-              onClick={() => handleAction('Gave medicine')}
+              onClick={() => setIsInventoryOpen(true)}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -391,7 +428,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Medicine</span>
             </Button>
             <Button
-              onClick={() => handleAction('Cleaned')}
+              onClick={() => setIsInventoryOpen(true)}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -406,28 +443,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         return (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => handleAction('Fed')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
               <Utensils className="h-5 w-5" />
               <span className="text-xs">Feed</span>
             </Button>
             <Button
-              onClick={() => handleAction('Cleaned')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
             >
               <Sparkles className="h-5 w-5" />
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleAction(currentBlobbi.isSleeping ? 'Woke up' : 'Put to sleep')}
+              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'rest')}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
               <Bed className="h-5 w-5" />
-              <span className="text-xs">Sleep</span>
+              <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
-              onClick={() => handleAction('Gave medicine')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -442,28 +483,32 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         return (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => handleAction('Fed')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
               <Utensils className="h-5 w-5" />
               <span className="text-xs">Feed</span>
             </Button>
             <Button
-              onClick={() => handleAction('Cleaned')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
             >
               <Sparkles className="h-5 w-5" />
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleAction(currentBlobbi.isSleeping ? 'Woke up' : 'Put to sleep')}
+              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'rest')}
+              disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
               <Bed className="h-5 w-5" />
-              <span className="text-xs">Sleep</span>
+              <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
-              onClick={() => handleAction('Gave medicine')}
+              onClick={() => setIsInventoryOpen(true)}
+              disabled={isInteracting}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -491,7 +536,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       return (
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => handleAction('Played with toys')}
+            onClick={() => setIsInventoryOpen(true)}
+            disabled={isInteracting}
             className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
           >
             <Gamepad2 className="h-5 w-5" />
@@ -813,7 +859,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   Food
                 </TabsTrigger>
-                <TabsTrigger value="toys" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   Toys
                 </TabsTrigger>
                 <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
@@ -822,41 +868,103 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   Hygiene
                 </TabsTrigger>
-                <TabsTrigger value="accessories" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
                   Accessories
                 </TabsTrigger>
               </TabsList>
 
+              {/* All Items Tab */}
               <TabsContent value="all" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  You don&apos;t have any items yet.
-                </p>
+                {inventoryLoading ? (
+                  <p className="text-sm text-muted-foreground">Loading inventory...</p>
+                ) : availableItems.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">You don&apos;t have any items yet.</p>
+                ) : (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {availableItems.map((item) => {
+                      const itemDef = getItemDefinition(item.id);
+                      if (!itemDef) return null;
+
+                      return (
+                        <Button
+                          key={item.id}
+                          onClick={() => {
+                            handleInteraction(
+                              itemDef.category === 'food' ? 'feed' :
+                              itemDef.category === 'toy' ? 'play' :
+                              itemDef.category === 'medicine' ? 'medicine' :
+                              itemDef.category === 'hygiene' ? 'clean' : 'feed',
+                              item.id
+                            );
+                            setIsInventoryOpen(false);
+                          }}
+                          disabled={isInteracting}
+                          variant="outline"
+                          className="h-20 flex flex-col gap-1 relative"
+                        >
+                          <span className="text-2xl">{itemDef.icon}</span>
+                          <span className="text-xs">{itemDef.displayName}</span>
+                          <Badge variant="secondary" className="absolute top-1 right-1 text-[10px] px-1 py-0">
+                            {item.quantity}
+                          </Badge>
+                        </Button>
+                      );
+                    })}
+                  </div>
+                )}
               </TabsContent>
-              <TabsContent value="food" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  No food items yet.
-                </p>
-              </TabsContent>
-              <TabsContent value="toys" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  No toys yet.
-                </p>
-              </TabsContent>
-              <TabsContent value="medicine" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  No medicine items yet.
-                </p>
-              </TabsContent>
-              <TabsContent value="hygiene" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  No hygiene items yet.
-                </p>
-              </TabsContent>
-              <TabsContent value="accessories" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                <p className="text-sm text-muted-foreground">
-                  No accessories yet.
-                </p>
-              </TabsContent>
+
+              {/* Category-specific tabs */}
+              {(['food', 'toy', 'medicine', 'hygiene', 'accessory'] as BlobbiItemCategory[]).map((category) => (
+                <TabsContent key={category} value={category} className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                  {inventoryLoading ? (
+                    <p className="text-sm text-muted-foreground">Loading inventory...</p>
+                  ) : (() => {
+                    const categoryItems = availableItems.filter((item) => {
+                      const itemDef = getItemDefinition(item.id);
+                      return itemDef?.category === category;
+                    });
+
+                    if (categoryItems.length === 0) {
+                      return <p className="text-sm text-muted-foreground">No {category} items yet.</p>;
+                    }
+
+                    return (
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        {categoryItems.map((item) => {
+                          const itemDef = getItemDefinition(item.id);
+                          if (!itemDef) return null;
+
+                          return (
+                            <Button
+                              key={item.id}
+                              onClick={() => {
+                                handleInteraction(
+                                  category === 'food' ? 'feed' :
+                                  category === 'toy' ? 'play' :
+                                  category === 'medicine' ? 'medicine' :
+                                  category === 'hygiene' ? 'clean' : 'feed',
+                                  item.id
+                                );
+                                setIsInventoryOpen(false);
+                              }}
+                              disabled={isInteracting}
+                              variant="outline"
+                              className="h-20 flex flex-col gap-1 relative"
+                            >
+                              <span className="text-2xl">{itemDef.icon}</span>
+                              <span className="text-xs">{itemDef.displayName}</span>
+                              <Badge variant="secondary" className="absolute top-1 right-1 text-[10px] px-1 py-0">
+                                {item.quantity}
+                              </Badge>
+                            </Button>
+                          );
+                        })}
+                      </div>
+                    );
+                  })()}
+                </TabsContent>
+              ))}
             </Tabs>
           </div>
         </DialogContent>
