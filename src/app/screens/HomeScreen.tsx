@@ -52,6 +52,7 @@ import {
   X,
   ClipboardList,
 } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from '@/components/ui/tooltip';
 import { useToast } from '@/hooks/useToast';
 import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
@@ -663,8 +664,25 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               />
             </div>
 
-            {/* Right: Theme Toggle + Menu */}
+            {/* Right: Shop, Theme Toggle + Menu */}
             <div className="flex items-center gap-1">
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsShopOpen(true)}
+                      aria-label="Shop"
+                    >
+                      <ShoppingCart className="h-5 w-5" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Shop</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -676,10 +694,6 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                   <DropdownMenuItem onClick={() => toast({ title: 'Settings', description: 'Settings coming soon' })}>
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setIsShopOpen(true)}>
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Shop
                   </DropdownMenuItem>
                   {onLogout && (
                     <>
@@ -900,44 +914,47 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
       {/* INVENTORY MODAL */}
       <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
-        <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] h-auto flex flex-col p-0 rounded-2xl sm:w-full sm:max-w-3xl sm:max-h-[80vh]">
-          {/* Inventory header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
-            <h2 className="text-sm font-semibold text-slate-900 dark:text-[hsl(250,15%,95%)]">Inventory</h2>
-          </div>
+        <DialogContent className="w-[94vw] max-w-2xl max-h-[80vh] flex flex-col p-0 rounded-2xl gap-0">
+          {/* Fixed header */}
+          <DialogHeader className="flex-none px-6 py-4 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
+            <DialogTitle>Inventory</DialogTitle>
+          </DialogHeader>
 
-          {/* Inventory content */}
-          <div className="flex-1 flex flex-col overflow-hidden pb-10">
-            <Tabs defaultValue="all" className="flex-1 flex flex-col">
-              <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto no-scrollbar justify-start sm:justify-center">
-                <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  All Items
-                </TabsTrigger>
-                <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  Food
-                </TabsTrigger>
-                <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  Toys
-                </TabsTrigger>
-                <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  Medicine
-                </TabsTrigger>
-                <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  Hygiene
-                </TabsTrigger>
-                <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                  Accessories
-                </TabsTrigger>
-              </TabsList>
+          {/* Scrollable content area */}
+          <div className="flex-1 overflow-y-auto">
+            <Tabs defaultValue="all" className="flex flex-col h-full">
+              {/* Fixed tabs - 2 rows on mobile, single row on desktop */}
+              <div className="flex-none px-4 pt-4 pb-3 border-b border-purple-100/50 dark:border-[hsl(250,25%,22%)]/50">
+                <TabsList className="grid grid-cols-3 gap-2 h-auto bg-transparent p-0 sm:flex sm:flex-wrap sm:justify-center">
+                  <TabsTrigger value="all" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    All
+                  </TabsTrigger>
+                  <TabsTrigger value="food" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Food
+                  </TabsTrigger>
+                  <TabsTrigger value="toy" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Toys
+                  </TabsTrigger>
+                  <TabsTrigger value="medicine" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Medicine
+                  </TabsTrigger>
+                  <TabsTrigger value="hygiene" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Hygiene
+                  </TabsTrigger>
+                  <TabsTrigger value="accessory" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                    Accessories
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
               {/* All Items Tab */}
-              <TabsContent value="all" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+              <TabsContent value="all" className="px-4 py-4 mt-0 data-[state=inactive]:hidden">
                 {inventoryLoading ? (
                   <p className="text-sm text-muted-foreground">Loading inventory...</p>
                 ) : availableItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground">You don&apos;t have any items yet.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {availableItems.map((item) => {
                       const itemDef = getItemDefinition(item.id);
                       if (!itemDef) return null;
@@ -959,7 +976,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
               {/* Category-specific tabs */}
               {(['food', 'toy', 'medicine', 'hygiene', 'accessory'] as BlobbiItemCategory[]).map((category) => (
-                <TabsContent key={category} value={category} className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                <TabsContent key={category} value={category} className="px-4 py-4 mt-0 data-[state=inactive]:hidden">
                   {inventoryLoading ? (
                     <p className="text-sm text-muted-foreground">Loading inventory...</p>
                   ) : (() => {
@@ -973,7 +990,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                     }
 
                     return (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                         {categoryItems.map((item) => {
                           const itemDef = getItemDefinition(item.id);
                           if (!itemDef) return null;
@@ -1134,39 +1151,42 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
         {/* SHOP MODAL */}
         <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
-          <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] h-auto flex flex-col p-0 rounded-2xl sm:w-full sm:max-w-3xl sm:max-h-[80vh]">
-            {/* Shop header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-[hsl(250,15%,95%)]">Shop</h2>
-            </div>
+          <DialogContent className="w-[94vw] max-w-2xl max-h-[80vh] flex flex-col p-0 rounded-2xl gap-0">
+            {/* Fixed header */}
+            <DialogHeader className="flex-none px-6 py-4 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
+              <DialogTitle>Shop</DialogTitle>
+            </DialogHeader>
 
-            {/* Shop content */}
-            <div className="flex-1 flex flex-col overflow-hidden pb-10">
-              <Tabs defaultValue="all" className="flex-1 flex flex-col">
-                <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto no-scrollbar justify-start sm:justify-center">
-                  <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    All Items
-                  </TabsTrigger>
-                  <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    Food
-                  </TabsTrigger>
-                  <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    Toys
-                  </TabsTrigger>
-                  <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    Medicine
-                  </TabsTrigger>
-                  <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    Hygiene
-                  </TabsTrigger>
-                  <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
-                    Accessories
-                  </TabsTrigger>
-                </TabsList>
+            {/* Scrollable content area */}
+            <div className="flex-1 overflow-y-auto">
+              <Tabs defaultValue="all" className="flex flex-col h-full">
+                {/* Fixed tabs - 2 rows on mobile, single row on desktop */}
+                <div className="flex-none px-4 pt-4 pb-3 border-b border-purple-100/50 dark:border-[hsl(250,25%,22%)]/50">
+                  <TabsList className="grid grid-cols-3 gap-2 h-auto bg-transparent p-0 sm:flex sm:flex-wrap sm:justify-center">
+                    <TabsTrigger value="all" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      All
+                    </TabsTrigger>
+                    <TabsTrigger value="food" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Food
+                    </TabsTrigger>
+                    <TabsTrigger value="toy" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Toys
+                    </TabsTrigger>
+                    <TabsTrigger value="medicine" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Medicine
+                    </TabsTrigger>
+                    <TabsTrigger value="hygiene" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Hygiene
+                    </TabsTrigger>
+                    <TabsTrigger value="accessory" className="text-xs px-3 py-2 rounded-full data-[state=active]:bg-primary data-[state=active]:text-primary-foreground">
+                      Accessories
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
 
                 {/* All Items Tab */}
-                <TabsContent value="all" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                <TabsContent value="all" className="px-4 py-4 mt-0 data-[state=inactive]:hidden">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                     {allItems.map((item) => {
                       const ownedQuantity = availableItems.find(i => i.id === item.id)?.quantity || 0;
 
@@ -1183,17 +1203,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                           className="h-20 flex flex-col gap-1 relative"
                         >
                           <span className="text-2xl">{item.icon}</span>
-                          <span className="text-xs">{item.displayName}</span>
+                          <span className="text-xs truncate max-w-full px-1">{item.displayName}</span>
 
                           {/* Price badge (left-top) */}
                           <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1 py-0">
-                            {item.price} coins
+                            💰 {item.price}
                           </Badge>
 
                           {/* Owned quantity badge (right-top) - only if owned */}
                           {ownedQuantity > 0 && (
                             <Badge variant="default" className="absolute top-1 right-1 text-[10px] px-1 py-0">
-                              Own {ownedQuantity}
+                              {ownedQuantity}
                             </Badge>
                           )}
                         </Button>
@@ -1204,7 +1224,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
                 {/* Category-specific tabs */}
                 {(['food', 'toy', 'medicine', 'hygiene', 'accessory'] as BlobbiItemCategory[]).map((category) => (
-                  <TabsContent key={category} value={category} className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                  <TabsContent key={category} value={category} className="px-4 py-4 mt-0 data-[state=inactive]:hidden">
                     {(() => {
                       const categoryItems = allItems.filter(item => item.category === category);
 
@@ -1213,7 +1233,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                       }
 
                       return (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
                           {categoryItems.map((item) => {
                             const ownedQuantity = availableItems.find(i => i.id === item.id)?.quantity || 0;
 
@@ -1230,17 +1250,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                                 className="h-20 flex flex-col gap-1 relative"
                               >
                                 <span className="text-2xl">{item.icon}</span>
-                                <span className="text-xs">{item.displayName}</span>
+                                <span className="text-xs truncate max-w-full px-1">{item.displayName}</span>
 
                                 {/* Price badge (left-top) */}
                                 <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1 py-0">
-                                  {item.price} coins
+                                  💰 {item.price}
                                 </Badge>
 
                                 {/* Owned quantity badge (right-top) - only if owned */}
                                 {ownedQuantity > 0 && (
                                   <Badge variant="default" className="absolute top-1 right-1 text-[10px] px-1 py-0">
-                                    Own {ownedQuantity}
+                                    {ownedQuantity}
                                   </Badge>
                                 )}
                               </Button>
