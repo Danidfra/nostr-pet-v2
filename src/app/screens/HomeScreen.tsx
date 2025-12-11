@@ -6,6 +6,8 @@ import { EggGraphic } from '@/components/blobbi/EggGraphic';
 import { BabyGraphic } from '@/components/blobbi/BabyGraphic';
 import { AdultGraphic } from '@/components/blobbi/AdultGraphic';
 import { StatusCircle } from '@/components/blobbi/StatusCircle';
+import { ItemCard } from '@/components/blobbi/ItemCard';
+import { ItemUseModal } from '@/components/blobbi/ItemUseModal';
 import { useMyBlobbis } from '@/hooks/nostr-pet/useBlobbiStatus';
 import { mapBlobbiStatusListToBlobbis } from '@/lib/nostr-pet/status-31124';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -55,7 +57,7 @@ import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 import { useBlobbonautInventory } from '@/hooks/nostr-pet/useBlobbonautInventory';
 import { useBlobbiInteraction } from '@/hooks/nostr-pet/useBlobbiInteraction';
-import { getItemDefinition, type BlobbiItemCategory } from '@/lib/blobbi-items';
+import { getItemDefinition, type BlobbiItemCategory, type BlobbiItemDefinition } from '@/lib/blobbi-items';
 import type { BlobbiAction } from '@/lib/blobbi-interaction-logic';
 
 // MiniBlobbiAvatar component - Reusable mini Blobbi graphic for avatars
@@ -158,6 +160,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const [isMissionsModalOpen, setIsMissionsModalOpen] = useState(false);
   const [isInventoryOpen, setIsInventoryOpen] = useState(false);
   const [isBlobbiSelectorOpen, setIsBlobbiSelectorOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState<BlobbiItemDefinition | null>(null);
+  const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const { toast } = useToast();
 
   // Get inventory data
@@ -315,6 +319,55 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         variant: 'destructive',
       });
     }
+  };
+
+  // Handle opening item modal
+  const handleItemClick = (itemId: string) => {
+    const itemDef = getItemDefinition(itemId);
+    if (itemDef) {
+      setSelectedItem(itemDef);
+      setIsItemModalOpen(true);
+    }
+  };
+
+  // Handle using item from modal (with quantity support)
+  const handleUseItemFromModal = async (itemId: string, quantity: number) => {
+    if (!currentBlobbi) return;
+
+    // For now, we'll use items one at a time in a loop
+    // In the future, the interaction system could be updated to support quantity
+    for (let i = 0; i < quantity; i++) {
+      const itemDef = getItemDefinition(itemId);
+      if (!itemDef) continue;
+
+      const action: BlobbiAction =
+        itemDef.category === 'food' ? 'feed' :
+        itemDef.category === 'toy' ? 'play' :
+        itemDef.category === 'medicine' ? 'medicine' :
+        itemDef.category === 'hygiene' ? 'clean' : 'feed';
+
+      const result = await interact({ action, itemId });
+
+      if (!result.success) {
+        toast({
+          title: 'Error',
+          description: result.error || 'Failed to use item',
+          variant: 'destructive',
+        });
+        return; // Stop on first error
+      }
+    }
+
+    // Success! Show toast
+    const itemDef = getItemDefinition(itemId);
+    toast({
+      title: 'Success!',
+      description: `${currentBlobbi.name} used ${quantity}x ${itemDef?.displayName}!`,
+    });
+
+    // Close both modals
+    setIsItemModalOpen(false);
+    setIsInventoryOpen(false);
   };
 
   // Legacy action handler for non-item interactions
@@ -886,28 +939,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                       if (!itemDef) return null;
 
                       return (
-                        <Button
+                        <ItemCard
                           key={item.id}
-                          onClick={() => {
-                            handleInteraction(
-                              itemDef.category === 'food' ? 'feed' :
-                              itemDef.category === 'toy' ? 'play' :
-                              itemDef.category === 'medicine' ? 'medicine' :
-                              itemDef.category === 'hygiene' ? 'clean' : 'feed',
-                              item.id
-                            );
-                            setIsInventoryOpen(false);
-                          }}
+                          item={itemDef}
+                          quantity={item.quantity}
+                          blobbiStage={currentBlobbi.lifeStage}
+                          onClick={() => handleItemClick(item.id)}
                           disabled={isInteracting}
-                          variant="outline"
-                          className="h-20 flex flex-col gap-1 relative"
-                        >
-                          <span className="text-2xl">{itemDef.icon}</span>
-                          <span className="text-xs">{itemDef.displayName}</span>
-                          <Badge variant="secondary" className="absolute top-1 right-1 text-[10px] px-1 py-0">
-                            {item.quantity}
-                          </Badge>
-                        </Button>
+                        />
                       );
                     })}
                   </div>
@@ -936,28 +975,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                           if (!itemDef) return null;
 
                           return (
-                            <Button
+                            <ItemCard
                               key={item.id}
-                              onClick={() => {
-                                handleInteraction(
-                                  category === 'food' ? 'feed' :
-                                  category === 'toy' ? 'play' :
-                                  category === 'medicine' ? 'medicine' :
-                                  category === 'hygiene' ? 'clean' : 'feed',
-                                  item.id
-                                );
-                                setIsInventoryOpen(false);
-                              }}
+                              item={itemDef}
+                              quantity={item.quantity}
+                              blobbiStage={currentBlobbi.lifeStage}
+                              onClick={() => handleItemClick(item.id)}
                               disabled={isInteracting}
-                              variant="outline"
-                              className="h-20 flex flex-col gap-1 relative"
-                            >
-                              <span className="text-2xl">{itemDef.icon}</span>
-                              <span className="text-xs">{itemDef.displayName}</span>
-                              <Badge variant="secondary" className="absolute top-1 right-1 text-[10px] px-1 py-0">
-                                {item.quantity}
-                              </Badge>
-                            </Button>
+                            />
                           );
                         })}
                       </div>
@@ -1091,6 +1116,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* ITEM USE MODAL */}
+        <ItemUseModal
+          open={isItemModalOpen}
+          onOpenChange={setIsItemModalOpen}
+          item={selectedItem}
+          quantity={selectedItem ? (availableItems.find(i => i.id === selectedItem.id)?.quantity || 0) : 0}
+          blobbiStage={currentBlobbi.lifeStage}
+          onUseItem={handleUseItemFromModal}
+          isLoading={isInteracting}
+        />
       </div>
     </div>
   );
