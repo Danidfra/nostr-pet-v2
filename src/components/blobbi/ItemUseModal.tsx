@@ -1,6 +1,6 @@
 /**
  * ItemUseModal Component
- * 
+ *
  * Modal dialog for using items from the inventory.
  * Allows selecting quantity and validates item usage rules.
  */
@@ -43,19 +43,19 @@ export interface ItemUseModalProps {
 
 /**
  * Modal for using items with quantity selection
- * 
+ *
  * Features:
  * - Displays item information (icon, name, description, quantity)
  * - Quantity stepper with +/- buttons
  * - Validates item usage rules (stage compatibility)
  * - Shows error messages for unusable items
  * - Disables "Use" button during loading
- * 
+ *
  * @example
  * ```tsx
  * const [selectedItem, setSelectedItem] = useState<BlobbiItemDefinition | null>(null);
  * const [isOpen, setIsOpen] = useState(false);
- * 
+ *
  * <ItemUseModal
  *   open={isOpen}
  *   onOpenChange={setIsOpen}
@@ -155,48 +155,50 @@ export const ItemUseModal: React.FC<ItemUseModalProps> = ({
             </div>
           </div>
 
-          {/* Stat effects preview */}
-          {(item.hungerDelta || item.happinessDelta || item.energyDelta || 
+          {/* Stat effects preview - scaled by selected quantity */}
+          {(item.hungerDelta || item.happinessDelta || item.energyDelta ||
             item.hygieneDelta || item.healthDelta) && (
             <div className="rounded-lg bg-muted p-3 space-y-1">
-              <p className="text-xs font-medium text-muted-foreground mb-2">Effects:</p>
+              <p className="text-xs font-medium text-muted-foreground mb-2">
+                Effects (for {selectedQuantity} {selectedQuantity === 1 ? 'item' : 'items'}):
+              </p>
               {item.hungerDelta !== undefined && (
                 <div className="flex items-center justify-between text-xs">
                   <span>Hunger</span>
-                  <span className={item.hungerDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {item.hungerDelta > 0 ? '+' : ''}{item.hungerDelta}
+                  <span className={(item.hungerDelta * selectedQuantity) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {(item.hungerDelta * selectedQuantity) > 0 ? '+' : ''}{item.hungerDelta * selectedQuantity}
                   </span>
                 </div>
               )}
               {item.happinessDelta !== undefined && (
                 <div className="flex items-center justify-between text-xs">
                   <span>Happiness</span>
-                  <span className={item.happinessDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {item.happinessDelta > 0 ? '+' : ''}{item.happinessDelta}
+                  <span className={(item.happinessDelta * selectedQuantity) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {(item.happinessDelta * selectedQuantity) > 0 ? '+' : ''}{item.happinessDelta * selectedQuantity}
                   </span>
                 </div>
               )}
               {item.energyDelta !== undefined && (
                 <div className="flex items-center justify-between text-xs">
                   <span>Energy</span>
-                  <span className={item.energyDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {item.energyDelta > 0 ? '+' : ''}{item.energyDelta}
+                  <span className={(item.energyDelta * selectedQuantity) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {(item.energyDelta * selectedQuantity) > 0 ? '+' : ''}{item.energyDelta * selectedQuantity}
                   </span>
                 </div>
               )}
               {item.hygieneDelta !== undefined && (
                 <div className="flex items-center justify-between text-xs">
                   <span>Hygiene</span>
-                  <span className={item.hygieneDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {item.hygieneDelta > 0 ? '+' : ''}{item.hygieneDelta}
+                  <span className={(item.hygieneDelta * selectedQuantity) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {(item.hygieneDelta * selectedQuantity) > 0 ? '+' : ''}{item.hygieneDelta * selectedQuantity}
                   </span>
                 </div>
               )}
               {item.healthDelta !== undefined && (
                 <div className="flex items-center justify-between text-xs">
                   <span>Health</span>
-                  <span className={item.healthDelta > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
-                    {item.healthDelta > 0 ? '+' : ''}{item.healthDelta}
+                  <span className={(item.healthDelta * selectedQuantity) > 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
+                    {(item.healthDelta * selectedQuantity) > 0 ? '+' : ''}{item.healthDelta * selectedQuantity}
                   </span>
                 </div>
               )}

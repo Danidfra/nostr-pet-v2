@@ -57,7 +57,7 @@ import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 import { useBlobbonautInventory } from '@/hooks/nostr-pet/useBlobbonautInventory';
 import { useBlobbiInteraction } from '@/hooks/nostr-pet/useBlobbiInteraction';
-import { getItemDefinition, type BlobbiItemCategory, type BlobbiItemDefinition } from '@/lib/blobbi-items';
+import { getItemDefinition, getAllItems, type BlobbiItemCategory, type BlobbiItemDefinition } from '@/lib/blobbi-items';
 import type { BlobbiAction } from '@/lib/blobbi-interaction-logic';
 
 // MiniBlobbiAvatar component - Reusable mini Blobbi graphic for avatars
@@ -162,10 +162,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const [isBlobbiSelectorOpen, setIsBlobbiSelectorOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<BlobbiItemDefinition | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
+  const [isShopOpen, setIsShopOpen] = useState(false);
   const { toast } = useToast();
 
   // Get inventory data
   const { availableItems, isLoading: inventoryLoading } = useBlobbonautInventory();
+
+  // Get all items for shop
+  const allItems = useMemo(() => getAllItems(), []);
 
   // Get interaction hook for current Blobbi
   const { interact, isLoading: isInteracting } = useBlobbiInteraction(blobbis[currentBlobbiIndex]?.id || '');
@@ -673,7 +677,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                     <Settings className="mr-2 h-4 w-4" />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast({ title: 'Shop', description: 'Shop coming soon' })}>
+                  <DropdownMenuItem onClick={() => setIsShopOpen(true)}>
                     <ShoppingCart className="mr-2 h-4 w-4" />
                     Shop
                   </DropdownMenuItem>
@@ -905,23 +909,23 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           {/* Inventory content */}
           <div className="flex-1 flex flex-col overflow-hidden pb-10">
             <Tabs defaultValue="all" className="flex-1 flex flex-col">
-              <TabsList className="flex flex-wrap gap-2 px-4 pt-3">
-                <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+              <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto no-scrollbar justify-start sm:justify-center">
+                <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   All Items
                 </TabsTrigger>
-                <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   Food
                 </TabsTrigger>
-                <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   Toys
                 </TabsTrigger>
-                <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   Medicine
                 </TabsTrigger>
-                <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   Hygiene
                 </TabsTrigger>
-                <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap">
+                <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
                   Accessories
                 </TabsTrigger>
               </TabsList>
@@ -933,7 +937,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                 ) : availableItems.length === 0 ? (
                   <p className="text-sm text-muted-foreground">You don&apos;t have any items yet.</p>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                     {availableItems.map((item) => {
                       const itemDef = getItemDefinition(item.id);
                       if (!itemDef) return null;
@@ -969,7 +973,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                     }
 
                     return (
-                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
                         {categoryItems.map((item) => {
                           const itemDef = getItemDefinition(item.id);
                           if (!itemDef) return null;
@@ -1127,6 +1131,130 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           onUseItem={handleUseItemFromModal}
           isLoading={isInteracting}
         />
+
+        {/* SHOP MODAL */}
+        <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
+          <DialogContent className="w-[94vw] max-w-2xl max-h-[85vh] h-auto flex flex-col p-0 rounded-2xl sm:w-full sm:max-w-3xl sm:max-h-[80vh]">
+            {/* Shop header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-[hsl(250,15%,95%)]">Shop</h2>
+            </div>
+
+            {/* Shop content */}
+            <div className="flex-1 flex flex-col overflow-hidden pb-10">
+              <Tabs defaultValue="all" className="flex-1 flex flex-col">
+                <TabsList className="flex gap-2 px-4 pt-3 overflow-x-auto no-scrollbar justify-start sm:justify-center">
+                  <TabsTrigger value="all" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    All Items
+                  </TabsTrigger>
+                  <TabsTrigger value="food" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    Food
+                  </TabsTrigger>
+                  <TabsTrigger value="toy" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    Toys
+                  </TabsTrigger>
+                  <TabsTrigger value="medicine" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    Medicine
+                  </TabsTrigger>
+                  <TabsTrigger value="hygiene" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    Hygiene
+                  </TabsTrigger>
+                  <TabsTrigger value="accessory" className="text-xs px-3 py-1 rounded-full whitespace-nowrap flex-shrink-0">
+                    Accessories
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* All Items Tab */}
+                <TabsContent value="all" className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                    {allItems.map((item) => {
+                      const ownedQuantity = availableItems.find(i => i.id === item.id)?.quantity || 0;
+
+                      return (
+                        <Button
+                          key={item.id}
+                          onClick={() => {
+                            toast({
+                              title: 'Shop',
+                              description: `Buying ${item.displayName} is not implemented yet.`,
+                            });
+                          }}
+                          variant="outline"
+                          className="h-20 flex flex-col gap-1 relative"
+                        >
+                          <span className="text-2xl">{item.icon}</span>
+                          <span className="text-xs">{item.displayName}</span>
+
+                          {/* Price badge (left-top) */}
+                          <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1 py-0">
+                            {item.price} coins
+                          </Badge>
+
+                          {/* Owned quantity badge (right-top) - only if owned */}
+                          {ownedQuantity > 0 && (
+                            <Badge variant="default" className="absolute top-1 right-1 text-[10px] px-1 py-0">
+                              Own {ownedQuantity}
+                            </Badge>
+                          )}
+                        </Button>
+                      );
+                    })}
+                  </div>
+                </TabsContent>
+
+                {/* Category-specific tabs */}
+                {(['food', 'toy', 'medicine', 'hygiene', 'accessory'] as BlobbiItemCategory[]).map((category) => (
+                  <TabsContent key={category} value={category} className="flex-1 overflow-y-auto px-4 py-3 mt-0 min-h-[180px] sm:min-h-[220px]">
+                    {(() => {
+                      const categoryItems = allItems.filter(item => item.category === category);
+
+                      if (categoryItems.length === 0) {
+                        return <p className="text-sm text-muted-foreground">No {category} items available.</p>;
+                      }
+
+                      return (
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                          {categoryItems.map((item) => {
+                            const ownedQuantity = availableItems.find(i => i.id === item.id)?.quantity || 0;
+
+                            return (
+                              <Button
+                                key={item.id}
+                                onClick={() => {
+                                  toast({
+                                    title: 'Shop',
+                                    description: `Buying ${item.displayName} is not implemented yet.`,
+                                  });
+                                }}
+                                variant="outline"
+                                className="h-20 flex flex-col gap-1 relative"
+                              >
+                                <span className="text-2xl">{item.icon}</span>
+                                <span className="text-xs">{item.displayName}</span>
+
+                                {/* Price badge (left-top) */}
+                                <Badge variant="secondary" className="absolute top-1 left-1 text-[10px] px-1 py-0">
+                                  {item.price} coins
+                                </Badge>
+
+                                {/* Owned quantity badge (right-top) - only if owned */}
+                                {ownedQuantity > 0 && (
+                                  <Badge variant="default" className="absolute top-1 right-1 text-[10px] px-1 py-0">
+                                    Own {ownedQuantity}
+                                  </Badge>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })()}
+                  </TabsContent>
+                ))}
+              </Tabs>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
