@@ -40,18 +40,18 @@ export function parseStatChange(value: string): { stat: string; delta: number } 
  * Validate that an action is valid for a given stage
  */
 export function isActionValidForStage(action: BlobbiAction, stage: 'egg' | 'baby' | 'adult'): boolean {
-  // Universal actions
+  // Universal actions (all stages)
   if (action === 'clean' || action === 'medicine') {
     return true;
   }
 
   // Egg-only actions
-  if (action === 'warm' || action === 'sing' || action === 'check' || action === 'talk') {
+  if (action === 'warm' || action === 'sing') {
     return stage === 'egg';
   }
 
   // Baby/Adult actions
-  if (action === 'feed' || action === 'play' || action === 'rest' || action === 'wake' || action === 'breed') {
+  if (action === 'feed' || action === 'play' || action === 'sleep' || action === 'wake' || action === 'breed') {
     return stage === 'baby' || stage === 'adult';
   }
 

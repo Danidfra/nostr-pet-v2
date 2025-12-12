@@ -2,7 +2,7 @@
  * Hook for Blobbi interactions with optimistic updates
  *
  * Handles:
- * - Computing new stats using interaction logic
+ * - Computing stat deltas using pure delta logic
  * - Optimistic updates to Blobbi status in React Query cache
  * - Optimistic inventory decrements in profile cache
  * - Publishing kind 14919 v2 interaction events
@@ -23,6 +23,7 @@ import {
   applyBlobbiInteraction,
   isActionValidForStage,
   getInteractionRewards,
+  clampStat,
   type BlobbiAction,
 } from '@/lib/blobbi-interaction-logic';
 import { executeInteractionFlow } from '@/lib/nostr-pet/interaction-flow';
@@ -136,8 +137,8 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     }
 
     try {
-      // 1. Compute new stats for optimistic update
-      const statChanges = applyBlobbiInteraction(
+      // 1. Compute PURE DELTAS for optimistic update
+      const deltas = applyBlobbiInteraction(
         blobbi,
         blobbi.stage,
         action,
@@ -147,25 +148,25 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       // Get rewards
       const rewards = getInteractionRewards(action);
 
-      // Multiply stat changes by quantity
-      const multipliedStatChanges: Partial<BlobbiStatus> = {};
-      Object.entries(statChanges).forEach(([key, value]) => {
-        if (typeof value === 'number') {
-          const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
-          const currentNum = typeof currentValue === 'number' ? currentValue : 0;
-          const delta = value - currentNum;
-          const newValue = currentNum + (delta * itemQuantity);
-          (multipliedStatChanges as Record<string, number>)[key] = newValue;
-        }
+      // Multiply deltas by quantity
+      const multipliedDeltas: Record<string, number> = {};
+      Object.entries(deltas).forEach(([key, delta]) => {
+        multipliedDeltas[key] = delta * itemQuantity;
       });
 
-      // Combine stat changes with rewards
-      const newStats: Partial<BlobbiStatus> = {
-        ...multipliedStatChanges,
-        experience: blobbi.experience + rewards.experience,
-        careStreak: blobbi.careStreak + rewards.carePoints,
-        lastInteraction: Math.floor(Date.now() / 1000),
-      };
+      // Apply deltas with clamping to get new stat values
+      const newStats: Partial<BlobbiStatus> = {};
+      Object.entries(multipliedDeltas).forEach(([key, delta]) => {
+        const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
+        const currentNum = typeof currentValue === 'number' ? currentValue : 0;
+        const newValue = clampStat(currentNum + delta);
+        (newStats as unknown as Record<string, number>)[key] = newValue;
+      });
+
+      // Add rewards
+      newStats.experience = blobbi.experience + rewards.experience;
+      newStats.careStreak = blobbi.careStreak + rewards.carePoints;
+      newStats.lastInteraction = Math.floor(Date.now() / 1000);
 
       // Add action-specific timestamps
       const now = Math.floor(Date.now() / 1000);
@@ -176,7 +177,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       if (action === 'sing') newStats.lastSing = now;
 
       // Handle sleep state changes
-      if (action === 'rest') {
+      if (action === 'sleep') {
         newStats.isSleeping = true;
         newStats.state = 'sleeping';
         newStats.sleepStartedAt = now;

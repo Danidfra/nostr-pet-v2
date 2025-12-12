@@ -16,18 +16,17 @@ export type BlobbiStage = 'egg' | 'baby' | 'adult';
  * Blobbi interaction actions
  */
 export type BlobbiAction =
+  // Universal actions (all stages)
+  | 'clean'
+  | 'medicine'
   // Egg actions
   | 'warm'
   | 'sing'
-  | 'check'
-  | 'talk'
-  | 'clean'
-  | 'medicine'
   // Baby/Adult actions
   | 'feed'
-  | 'rest'
-  | 'wake'
   | 'play'
+  | 'sleep'
+  | 'wake'
   // Breeding (stub for now)
   | 'breed';
 
@@ -37,7 +36,7 @@ export type BlobbiAction =
 export type BlobbiActionCategory =
   | 'nutrition'    // feed
   | 'enrichment'   // play
-  | 'recovery'     // rest, wake
+  | 'recovery'     // sleep, wake
   | 'care'         // clean, medicine, warm
   | 'social'       // sing
   | 'general';     // breed, other
@@ -129,18 +128,16 @@ export const ACTION_CATEGORY_MAP: Record<BlobbiAction, BlobbiActionCategory> = {
   play: 'enrichment',
 
   // Recovery
-  rest: 'recovery',
+  sleep: 'recovery',
   wake: 'recovery',
 
   // Care
   clean: 'care',
   medicine: 'care',
   warm: 'care',
-  check: 'care',
 
   // Social
   sing: 'social',
-  talk: 'social',
 
   // General
   breed: 'general',

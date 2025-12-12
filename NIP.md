@@ -15,8 +15,10 @@ The Blobbi ecosystem uses several custom Nostr event kinds to implement a decent
 ### Version Detection
 
 Events are versioned using the `b` (namespace) tag:
-- `["b", "blobbi:ecosystem:v1"]` - Version 1 (legacy)
-- `["b", "blobbi:ecosystem:v2"]` - Version 2 (current)
+- `["b", "blobbi:ecosystem:v1"]` - Version 1 (legacy, read-only)
+- `["b", "blobbi:ecosystem:v2"]` - Version 2 (current, all new events)
+
+**Important**: All new interaction events MUST use v2. V1 exists only for parsing historical data.
 
 ### Version 2 Specification
 
@@ -44,19 +46,19 @@ Events are versioned using the `b` (namespace) tag:
 
 #### Actions and Categories
 
+**Universal Actions (all stages):**
+- `clean` → `care` - Clean the Blobbi
+- `medicine` → `care` - Give medicine
+
 **Egg Stage Actions:**
 - `warm` → `care` - Warm the egg
 - `sing` → `social` - Sing to the egg
-- `clean` → `care` - Clean the egg
-- `medicine` → `care` - Apply medicine
 
 **Baby/Adult Stage Actions:**
 - `feed` → `nutrition` - Feed the Blobbi
 - `play` → `enrichment` - Play with the Blobbi
-- `rest` → `recovery` - Put Blobbi to sleep
+- `sleep` → `recovery` - Put Blobbi to sleep
 - `wake` → `recovery` - Wake up the Blobbi
-- `clean` → `care` - Clean the Blobbi
-- `medicine` → `care` - Give medicine
 
 **Future Actions:**
 - `breed` → `general` - Breeding (stub)
@@ -70,14 +72,27 @@ Stats are recorded in the `stat_change` tag using the format `stat_name:delta`:
 - `health` - Health level (0-100)
 - `hygiene` - Hygiene level (0-100)
 - `energy` - Energy level (0-100)
-- `egg_temperature` - Egg temperature (egg stage only)
-- `shell_integrity` - Shell integrity (egg stage only)
+- `egg_temperature` - Egg temperature (egg stage only, 0-100)
+- `shell_integrity` - Shell integrity (egg stage only, 0-100)
 
-Multiple `stat_change` tags can be included in a single event.
+**Important**: 
+- Multiple `stat_change` tags can be included in a single event
+- Delta values represent CHANGES, not absolute values
+- Positive deltas increase stats, negative deltas decrease stats
+- All stats are clamped to 0-100 range after application
 
 #### Content Field
 
 The `content` field is **empty** in v2. All data is stored in tags for efficient querying.
+
+#### Item Quantity Support
+
+When using items, the `item_quantity` tag specifies how many items are used:
+- Inventory (Kind 31125) is decremented by the specified quantity
+- Stat deltas are multiplied by the quantity
+- Defaults to 1 if not specified
+
+Example: Using 3 apples with `hunger:10` delta results in `hunger:30` total change.
 
 #### Example v2 Event
 
@@ -110,7 +125,7 @@ The `content` field is **empty** in v2. All data is stored in tags for efficient
 
 ### Version 1 Specification (Legacy)
 
-Version 1 events use the namespace `["b", "blobbi:ecosystem:v1"]` and store interaction data in JSON content. These events are still supported for backward compatibility.
+Version 1 events use the namespace `["b", "blobbi:ecosystem:v1"]` and store interaction data in JSON content. These events are still supported for **reading historical data only**. New events MUST NOT use v1 format.
 
 #### v1 Tags
 
@@ -134,32 +149,105 @@ Version 1 events use the namespace `["b", "blobbi:ecosystem:v1"]` and store inte
 
 ## Event Flow
 
-Blobbi interactions trigger a sequence of three events:
+Blobbi interactions trigger a strict sequence of three events:
 
 1. **Kind 31125** (Blobbonaut Profile) - Update inventory if item used
 2. **Kind 14919** (Interaction v2) - Record the interaction
 3. **Kind 31124** (Blobbi Status) - Update Blobbi state
 
+**Critical Rules:**
+- If 31125 fails → stop (don't publish 14919 or 31124)
+- If 14919 fails → rollback optimistic UI updates
+- 31124 must preserve all existing tags, updating only changed ones (no tag loss)
+
 This sequence ensures:
-- Inventory is decremented before the interaction
-- The interaction is permanently recorded
+- Inventory is decremented before the interaction is recorded
+- The interaction is permanently recorded on the network
 - The Blobbi's state reflects the interaction results
+- No partial states or inconsistencies
+
+## Stat Name Mapping
+
+The system uses a consistent mapping between camelCase (BlobbiStatus fields) and snake_case (tag names):
+
+| camelCase | snake_case |
+|-----------|------------|
+| `hunger` | `hunger` |
+| `happiness` | `happiness` |
+| `health` | `health` |
+| `hygiene` | `hygiene` |
+| `energy` | `energy` |
+| `eggTemperature` | `egg_temperature` |
+| `shellIntegrity` | `shell_integrity` |
+
+This mapping is used consistently across:
+- Kind 14919 `stat_change` tags
+- Kind 31124 stat tags
+- Interaction logic computations
 
 ## Migration from v1 to v2
 
 Applications should:
 1. Parse both v1 and v2 events for backward compatibility
-2. Publish only v2 events for new interactions
+2. **Publish only v2 events** for all new interactions
 3. Use the `b` tag to detect event version
-4. Fall back to v1 parsing if v2 parsing fails
+4. When displaying v1 events, derive life stage from current Blobbi state (Kind 31124), not from the v1 event
 
 ## Implementation Notes
 
-- **Stat Changes**: When using items with quantity > 1, multiply stat deltas by the quantity
-- **Clamping**: All stats are clamped to 0-100 range after application
-- **Timestamps**: Action-specific timestamps (e.g., `last_meal`) are updated in Kind 31124
-- **Sleep States**: `rest` and `wake` actions modify the `is_sleeping` and `state` fields
-- **Egg-Specific**: Medicine affects `shell_integrity` instead of `health` for eggs
+### Stat Delta Logic
+
+The interaction system uses **pure delta logic**:
+
+1. `applyBlobbiInteraction()` returns PURE DELTAS (changes), not absolute values
+2. Deltas are multiplied by `item_quantity` if using items
+3. Deltas are applied to current stats and clamped to 0-100
+4. Final values are written to Kind 31124
+5. Deltas are written to Kind 14919 `stat_change` tags
+
+**Example**:
+```typescript
+// Current stats
+blobbi.hunger = 50
+
+// Interaction returns delta
+delta = { hunger: 30 }
+
+// With quantity = 2
+multipliedDelta = { hunger: 60 }
+
+// Apply and clamp
+newValue = clamp(50 + 60) = 100
+
+// Write to 31124: ["hunger", "100"]
+// Write to 14919: ["stat_change", "hunger:60"]
+```
+
+### Egg-Specific Rules
+
+For eggs, medicine affects `shell_integrity` instead of `health`:
+- Medicine action normally provides `health:20` delta
+- For eggs, this is converted to `shell_integrity:20` delta
+- The `health` delta is removed for eggs
+
+### Sleep State Management
+
+- `sleep` action: Sets `is_sleeping:true`, `state:sleeping`, records `sleep_started_at` timestamp
+- `wake` action: Sets `is_sleeping:false`, `state:active`, clears sleep timestamps
+- Wake happiness delta depends on energy level:
+  - Energy ≥ 50: `happiness:+5`
+  - Energy < 50: `happiness:-5`
+
+### Action-Specific Timestamps
+
+The following timestamps are updated in Kind 31124 based on action:
+- `feed` → `last_meal`
+- `clean` → `last_clean`
+- `medicine` → `last_medicine`
+- `warm` → `last_warm`
+- `sing` → `last_sing`
+
+All actions update `last_interaction`.
 
 ## Related Kinds
 

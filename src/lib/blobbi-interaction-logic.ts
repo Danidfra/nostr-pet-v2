@@ -1,8 +1,11 @@
 /**
  * Blobbi Interaction Logic
  *
- * Pure functions for applying interaction effects to Blobbi stats.
+ * Pure functions for computing interaction stat deltas.
  * All rules match exactly the blobbi-v1-items-and-interactions.md specification.
+ *
+ * CRITICAL: This module returns PURE DELTAS, not absolute values.
+ * Callers are responsible for applying deltas and clamping to 0-100.
  */
 
 import type { BlobbiStatus } from '@/lib/nostr-pet/status-31124/types';
@@ -12,26 +15,24 @@ import { getItemDefinition } from './blobbi-items';
  * Interaction action types
  */
 export type BlobbiAction =
-  // Universal actions
+  // Universal actions (all stages)
   | 'clean'
   | 'medicine'
+  // Egg-only actions
+  | 'warm'
+  | 'sing'
   // Baby/Adult actions
   | 'feed'
   | 'play'
-  | 'rest'
+  | 'sleep'
   | 'wake'
-  | 'breed'
-  // Egg-only actions
-  | 'warm'
-  | 'check'
-  | 'sing'
-  | 'talk';
+  | 'breed';
 
 /**
- * Base interaction effects (without items)
+ * Base interaction effects (deltas, not absolute values)
  * Values from blobbi-v1-items-and-interactions.md
  */
-const BASE_INTERACTION_EFFECTS: Record<BlobbiAction, Partial<BlobbiStatus>> = {
+const BASE_INTERACTION_DELTAS: Record<BlobbiAction, Record<string, number>> = {
   // Universal actions
   clean: {
     hygiene: 40,
@@ -50,8 +51,8 @@ const BASE_INTERACTION_EFFECTS: Record<BlobbiAction, Partial<BlobbiStatus>> = {
     happiness: 25,
     energy: -10,
   },
-  rest: {
-    // Rest is handled specially (sets sleeping state)
+  sleep: {
+    // Sleep is handled specially (sets sleeping state)
   },
   wake: {
     // Wake happiness depends on energy level (handled in applyBlobbiInteraction)
@@ -66,78 +67,67 @@ const BASE_INTERACTION_EFFECTS: Record<BlobbiAction, Partial<BlobbiStatus>> = {
     health: 5,
     shellIntegrity: 5,
   },
-  check: {
-    happiness: 3,
-  },
   sing: {
     happiness: 8,
   },
-  talk: {
-    happiness: 6,
-  },
 };
 
 /**
- * Clamp a stat value to 0-100 range
- */
-const clampStat = (value: number): number => {
-  return Math.max(0, Math.min(100, value));
-};
-
-/**
- * Apply interaction effects to Blobbi stats
+ * Compute stat deltas for a Blobbi interaction
  *
- * @param currentStats - Current Blobbi status
+ * This function returns PURE DELTAS (changes), not absolute values.
+ * The caller is responsible for:
+ * - Applying deltas to current stats
+ * - Multiplying by item quantity if needed
+ * - Clamping final values to 0-100
+ *
+ * @param currentStats - Current Blobbi status (for context, e.g., energy level)
  * @param lifeStage - Current life stage
  * @param action - Interaction action
  * @param itemId - Optional item ID (for item-based interactions)
- * @returns New stats after applying interaction
+ * @returns Record of stat deltas (changes only)
  */
 export const applyBlobbiInteraction = (
   currentStats: BlobbiStatus,
   lifeStage: 'egg' | 'baby' | 'adult',
   action: BlobbiAction,
   itemId?: string
-): Partial<BlobbiStatus> => {
-  // Start with current stats
-  const newStats: Record<string, number | string | boolean | undefined> = {};
+): Record<string, number> => {
+  const deltas: Record<string, number> = {};
 
-  // 1. Apply base interaction effect
-  const baseEffect = BASE_INTERACTION_EFFECTS[action];
-  if (baseEffect) {
-    Object.entries(baseEffect).forEach(([key, value]) => {
-      if (typeof value === 'number') {
-        const currentValue = (currentStats as unknown as Record<string, number>)[key] || 0;
-        newStats[key] = currentValue + value;
-      }
+  // 1. Apply base interaction deltas
+  const baseDeltas = BASE_INTERACTION_DELTAS[action];
+  if (baseDeltas) {
+    Object.entries(baseDeltas).forEach(([key, delta]) => {
+      deltas[key] = delta;
     });
   }
 
-  // 2. Apply item effects (if item provided)
+  // 2. Apply item deltas (if item provided)
   if (itemId) {
     const itemDef = getItemDefinition(itemId);
     if (itemDef) {
       // Apply standard stat deltas
       if (itemDef.hungerDelta !== undefined) {
-        newStats.hunger = (currentStats.hunger || 0) + itemDef.hungerDelta;
+        deltas.hunger = (deltas.hunger || 0) + itemDef.hungerDelta;
       }
       if (itemDef.happinessDelta !== undefined) {
-        newStats.happiness = (currentStats.happiness || 0) + itemDef.happinessDelta;
+        deltas.happiness = (deltas.happiness || 0) + itemDef.happinessDelta;
       }
       if (itemDef.energyDelta !== undefined) {
-        newStats.energy = (currentStats.energy || 0) + itemDef.energyDelta;
+        deltas.energy = (deltas.energy || 0) + itemDef.energyDelta;
       }
       if (itemDef.hygieneDelta !== undefined) {
-        newStats.hygiene = (currentStats.hygiene || 0) + itemDef.hygieneDelta;
+        deltas.hygiene = (deltas.hygiene || 0) + itemDef.hygieneDelta;
       }
       if (itemDef.healthDelta !== undefined) {
-        newStats.health = (currentStats.health || 0) + itemDef.healthDelta;
+        deltas.health = (deltas.health || 0) + itemDef.healthDelta;
       }
       if (itemDef.eggTemperatureDelta !== undefined) {
-        newStats.eggTemperature = (currentStats.eggTemperature || 0) + itemDef.eggTemperatureDelta;
+        deltas.eggTemperature = (deltas.eggTemperature || 0) + itemDef.eggTemperatureDelta;
       }
       if (itemDef.shellIntegrityDelta !== undefined) {
-        newStats.shellIntegrity = (currentStats.shellIntegrity || 0) + itemDef.shellIntegrityDelta;
+        deltas.shellIntegrity = (deltas.shellIntegrity || 0) + itemDef.shellIntegrityDelta;
       }
     }
   }
@@ -145,37 +135,27 @@ export const applyBlobbiInteraction = (
   // 3. Apply egg-specific rules
   // For eggs: medicine affects shellIntegrity instead of health
   if (lifeStage === 'egg' && action === 'medicine') {
-    const healthValue = newStats.health;
-    if (typeof healthValue === 'number') {
-      // Convert health effect to shell integrity
-      const healthDelta = healthValue - (currentStats.health || 0);
-      newStats.shellIntegrity = (currentStats.shellIntegrity || 0) + healthDelta;
-      // Remove health change for eggs
-      newStats.health = currentStats.health;
+    const healthDelta = deltas.health || 0;
+    if (healthDelta !== 0) {
+      // Convert health delta to shell integrity delta
+      deltas.shellIntegrity = (deltas.shellIntegrity || 0) + healthDelta;
+      // Remove health delta for eggs
+      delete deltas.health;
     }
   }
 
-  // 4. Special wake logic
+  // 4. Special wake logic (energy-dependent)
   if (action === 'wake') {
     const currentEnergy = currentStats.energy || 0;
     if (currentEnergy >= 50) {
-      newStats.happiness = (currentStats.happiness || 0) + 5;
+      deltas.happiness = 5;
     } else {
-      newStats.happiness = (currentStats.happiness || 0) - 5;
+      deltas.happiness = -5;
     }
   }
 
-  // 5. Clamp all stats to 0-100 range
-  const clampedStats: Record<string, number | string | boolean | undefined> = {};
-  Object.entries(newStats).forEach(([key, value]) => {
-    if (typeof value === 'number') {
-      clampedStats[key] = clampStat(value);
-    } else {
-      clampedStats[key] = value;
-    }
-  });
-
-  return clampedStats as Partial<BlobbiStatus>;
+  // Return pure deltas
+  return deltas;
 };
 
 /**
@@ -192,13 +172,13 @@ export const isActionValidForStage = (
   }
 
   // Egg-only actions
-  const eggOnlyActions: BlobbiAction[] = ['warm', 'check', 'sing', 'talk'];
+  const eggOnlyActions: BlobbiAction[] = ['warm', 'sing'];
   if (eggOnlyActions.includes(action)) {
     return lifeStage === 'egg';
   }
 
   // Baby/Adult actions
-  const babyAdultActions: BlobbiAction[] = ['feed', 'play', 'rest', 'wake', 'breed'];
+  const babyAdultActions: BlobbiAction[] = ['feed', 'play', 'sleep', 'wake', 'breed'];
   if (babyAdultActions.includes(action)) {
     return lifeStage === 'baby' || lifeStage === 'adult';
   }
@@ -243,9 +223,16 @@ export const getInteractionRewards = (
     case 'warm':
     case 'sing':
       return { experience: 5, carePoints: 2 }; // Higher care points
-    case 'rest':
+    case 'sleep':
       return { experience: 0, carePoints: 0 }; // No rewards for sleeping
     default:
       return defaultRewards;
   }
+};
+
+/**
+ * Clamp a stat value to 0-100 range
+ */
+export const clampStat = (value: number): number => {
+  return Math.max(0, Math.min(100, value));
 };

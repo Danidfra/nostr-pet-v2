@@ -5,6 +5,11 @@
  * 1. Update inventory (31125) - if item used
  * 2. Publish interaction (14919 v2)
  * 3. Update Blobbi state (31124)
+ *
+ * CRITICAL EVENT ORDER:
+ * - If 31125 fails → stop
+ * - If 14919 fails → rollback optimistic UI
+ * - 31124 must preserve all existing tags, updating only changed ones
  */
 
 import type { NostrEvent } from '@nostrify/nostrify';
@@ -16,7 +21,8 @@ import { buildBlobbonautProfileEvent } from './profile-31125/build';
 import { buildInteractionV2Event } from './interaction-14919-v2/build';
 import { mapActionToCategory } from './interaction-14919-v2/helpers';
 import { getItemDefinition } from '@/lib/blobbi-items';
-import { applyBlobbiInteraction, getInteractionRewards } from '@/lib/blobbi-interaction-logic';
+import { applyBlobbiInteraction, getInteractionRewards, clampStat } from '@/lib/blobbi-interaction-logic';
+import { statToTag, getAllStatTagNames } from './core/stat-mapping';
 
 /**
  * Parameters for the interaction flow
@@ -39,23 +45,6 @@ export interface InteractionFlowResult {
   interactionEvent?: NostrEvent;
   statusEvent?: NostrEvent;
   newStats?: Partial<BlobbiStatus>;
-}
-
-/**
- * Clamp a stat value to 0-100 range
- */
-function clampStat(value: number): number {
-  return Math.max(0, Math.min(100, value));
-}
-
-/**
- * Convert stat name from BlobbiStatus format to interaction v2 format
- */
-function convertStatName(statName: string): string {
-  // Convert camelCase to snake_case for v2
-  if (statName === 'eggTemperature') return 'egg_temperature';
-  if (statName === 'shellIntegrity') return 'shell_integrity';
-  return statName;
 }
 
 /**
@@ -123,33 +112,28 @@ export async function executeInteractionFlow(
     }
 
     // ============================================================
-    // STEP 2: Compute stat changes and build interaction (14919 v2)
+    // STEP 2: Compute stat deltas and build interaction (14919 v2)
     // ============================================================
 
-    // Compute stat changes using existing logic
-    const statChangesObj = applyBlobbiInteraction(
+    // Get PURE DELTAS from interaction logic
+    const deltas = applyBlobbiInteraction(
       blobbi,
       blobbi.stage,
       action,
       itemId
     );
 
-    // Multiply stat changes by item quantity
-    const multipliedStatChanges: Record<string, number> = {};
-    Object.entries(statChangesObj).forEach(([key, value]) => {
-      if (typeof value === 'number') {
-        const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
-        const currentNum = typeof currentValue === 'number' ? currentValue : 0;
-        const delta = value - currentNum;
-        multipliedStatChanges[key] = delta * itemQuantity;
-      }
+    // Multiply deltas by item quantity
+    const multipliedDeltas: Record<string, number> = {};
+    Object.entries(deltas).forEach(([key, delta]) => {
+      multipliedDeltas[key] = delta * itemQuantity;
     });
 
-    // Convert to BlobbiStatChange array for v2
-    const statChanges: BlobbiStatChange[] = Object.entries(multipliedStatChanges)
-      .filter(([, delta]) => typeof delta === 'number' && delta !== 0)
+    // Convert to BlobbiStatChange array for v2 (using snake_case)
+    const statChanges: BlobbiStatChange[] = Object.entries(multipliedDeltas)
+      .filter(([, delta]) => delta !== 0)
       .map(([stat, delta]) => ({
-        stat: convertStatName(stat) as BlobbiStatChange['stat'],
+        stat: statToTag(stat) as BlobbiStatChange['stat'],
         delta: delta,
       }));
 
@@ -188,13 +172,14 @@ export async function executeInteractionFlow(
     // STEP 3: Update Blobbi State (31124)
     // ============================================================
 
-    // Apply stat changes with clamping
+    // Apply deltas with clamping to get new stat values
     const newStats: Partial<BlobbiStatus> = {};
 
-    Object.entries(multipliedStatChanges).forEach(([key, delta]) => {
-      const currentValue = (blobbi as any)[key] || 0;
-      const newValue = clampStat(currentValue + delta);
-      newStats[key as keyof BlobbiStatus] = newValue as any;
+    Object.entries(multipliedDeltas).forEach(([key, delta]) => {
+      const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
+      const currentNum = typeof currentValue === 'number' ? currentValue : 0;
+      const newValue = clampStat(currentNum + delta);
+      (newStats as unknown as Record<string, number>)[key] = newValue;
     });
 
     // Add rewards
@@ -211,7 +196,7 @@ export async function executeInteractionFlow(
     if (action === 'sing') newStats.lastSing = now;
 
     // Handle sleep state changes
-    if (action === 'rest') {
+    if (action === 'sleep') {
       newStats.isSleeping = true;
       newStats.state = 'sleeping';
       newStats.sleepStartedAt = now;
@@ -224,45 +209,35 @@ export async function executeInteractionFlow(
     }
 
     // Build updated status event preserving all original tags
-
-    // Since we don't have a complete status builder that preserves tags,
-    // we'll construct the event manually
     const statusTags: string[][] = [];
 
-    // Copy all tags from original event
+    // Get all stat tag names for filtering
+    const statTagNames = getAllStatTagNames();
+    const tagsToSkip = new Set([
+      ...statTagNames,
+      'experience',
+      'care_streak',
+      'last_interaction',
+      'last_meal',
+      'last_clean',
+      'last_medicine',
+      'last_warm',
+      'last_sing',
+      'is_sleeping',
+      'state',
+      'sleep_started_at',
+      'last_sleep_update',
+    ]);
+
+    // Copy all tags from original event except those we're updating
     for (const tag of blobbi.event.tags) {
       const tagName = tag[0];
-
-      // Skip tags we're updating
-      if (
-        tagName === 'hunger' ||
-        tagName === 'happiness' ||
-        tagName === 'health' ||
-        tagName === 'hygiene' ||
-        tagName === 'energy' ||
-        tagName === 'egg_temperature' ||
-        tagName === 'shell_integrity' ||
-        tagName === 'experience' ||
-        tagName === 'care_streak' ||
-        tagName === 'last_interaction' ||
-        tagName === 'last_meal' ||
-        tagName === 'last_clean' ||
-        tagName === 'last_medicine' ||
-        tagName === 'last_warm' ||
-        tagName === 'last_sing' ||
-        tagName === 'is_sleeping' ||
-        tagName === 'state' ||
-        tagName === 'sleep_started_at' ||
-        tagName === 'last_sleep_update'
-      ) {
-        continue;
+      if (!tagsToSkip.has(tagName)) {
+        statusTags.push(tag);
       }
-
-      // Preserve all other tags
-      statusTags.push(tag);
     }
 
-    // Add updated stat tags
+    // Add updated stat tags (using snake_case)
     if (newStats.hunger !== undefined) statusTags.push(['hunger', newStats.hunger.toString()]);
     if (newStats.happiness !== undefined) statusTags.push(['happiness', newStats.happiness.toString()]);
     if (newStats.health !== undefined) statusTags.push(['health', newStats.health.toString()]);
@@ -270,6 +245,8 @@ export async function executeInteractionFlow(
     if (newStats.energy !== undefined) statusTags.push(['energy', newStats.energy.toString()]);
     if (newStats.eggTemperature !== undefined) statusTags.push(['egg_temperature', newStats.eggTemperature.toString()]);
     if (newStats.shellIntegrity !== undefined) statusTags.push(['shell_integrity', newStats.shellIntegrity.toString()]);
+
+    // Add other updated tags
     if (newStats.experience !== undefined) statusTags.push(['experience', newStats.experience.toString()]);
     if (newStats.careStreak !== undefined) statusTags.push(['care_streak', newStats.careStreak.toString()]);
     if (newStats.lastInteraction !== undefined) statusTags.push(['last_interaction', newStats.lastInteraction.toString()]);

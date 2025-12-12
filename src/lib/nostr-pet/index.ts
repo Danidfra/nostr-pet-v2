@@ -11,6 +11,7 @@ export * from './core/kinds';
 export * from './core/types';
 export * from './core/tags';
 export * from './core/storage';
+export * from './core/stat-mapping';
 
 // Nostr client and subscriptions
 export * from './nostr/client';

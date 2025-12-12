@@ -1,13 +1,13 @@
 /**
  * Parser for Blobbi Interaction Events (Kind 14919)
  *
- * Supports both v1 (legacy) and v2 formats for backward compatibility
+ * Legacy v1 parser only - for backward compatibility with historical events.
+ * New events should use v2 format.
  */
 
 import type { NostrEvent } from '@nostrify/nostrify';
 import type { BlobbiInteractionEvent, BlobbiAction } from './types';
 import { INTERACTION_TAG_NAMES } from './types';
-import { parseBlobbiInteractionV2FromEvent, isInteractionV2Event } from '../interaction-14919-v2';
 
 /**
  * Check if an event is a v1 interaction event
@@ -19,6 +19,9 @@ export function isInteractionV1Event(event: NostrEvent): boolean {
 
 /**
  * Parse a Kind 14919 v1 interaction event from a Nostr event
+ *
+ * This is LEGACY parsing only for historical v1 events.
+ * Do not use for new events - use v2 instead.
  *
  * @param event - Nostr event to parse
  * @returns Parsed interaction or null if invalid
@@ -57,33 +60,4 @@ export function parseBlobbiInteractionV1FromEvent(event: NostrEvent): BlobbiInte
     itemId,
     lifeStage: lifeStage as 'egg' | 'baby' | 'adult',
   };
-}
-
-/**
- * Parse a Kind 14919 interaction event (supports both v1 and v2)
- *
- * @param event - Nostr event to parse
- * @returns Parsed interaction or null if invalid
- */
-export function parseBlobbiInteractionFromEvent(event: NostrEvent): BlobbiInteractionEvent | null {
-  // Try v2 first (preferred)
-  if (isInteractionV2Event(event)) {
-    const v2Event = parseBlobbiInteractionV2FromEvent(event);
-    if (v2Event) {
-      // Convert v2 to v1 format for backward compatibility
-      return {
-        event,
-        author: event.pubkey,
-        createdAt: event.created_at,
-        kind: event.kind,
-        blobbiId: v2Event.blobbiId,
-        action: v2Event.action,
-        itemId: v2Event.itemUsed,
-        lifeStage: 'baby', // Default, not stored in v2
-      };
-    }
-  }
-
-  // Fall back to v1
-  return parseBlobbiInteractionV1FromEvent(event);
 }

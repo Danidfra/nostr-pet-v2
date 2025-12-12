@@ -521,7 +521,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'rest')}
+              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'sleep')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
@@ -561,7 +561,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'rest')}
+              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'sleep')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
