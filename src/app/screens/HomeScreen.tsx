@@ -164,6 +164,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const [selectedItem, setSelectedItem] = useState<BlobbiItemDefinition | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [selectedInventoryTab, setSelectedInventoryTab] = useState<BlobbiItemCategory | 'all'>('all');
+  const [pendingAction, setPendingAction] = useState<BlobbiAction | null>(null);
   const { toast } = useToast();
 
   // Get inventory data
@@ -326,6 +328,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     }
   };
 
+  // Handle opening inventory with specific tab and pending action
+  const openInventory = (tab: BlobbiItemCategory | 'all', action: BlobbiAction | null = null) => {
+    setSelectedInventoryTab(tab);
+    setPendingAction(action);
+    setIsActionsOpen(false);
+    setIsInventoryOpen(true);
+  };
+
   // Handle opening item modal
   const handleItemClick = (itemId: string) => {
     const itemDef = getItemDefinition(itemId);
@@ -349,12 +359,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       return;
     }
 
-    // Determine action from item category
-    const action: BlobbiAction =
-      itemDef.category === 'food' ? 'feed' :
+    // Use pending action if available, otherwise determine from item category
+    const action: BlobbiAction = pendingAction ||
+      (itemDef.category === 'food' ? 'feed' :
       itemDef.category === 'toy' ? 'play' :
       itemDef.category === 'medicine' ? 'medicine' :
-      itemDef.category === 'hygiene' ? 'clean' : 'feed';
+      itemDef.category === 'hygiene' ? 'clean' : 'feed');
 
     // Use the new v2 system with quantity support
     const result = await interact({ action, itemId, itemQuantity: quantity });
@@ -374,9 +384,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       description: `${currentBlobbi.name} used ${quantity}x ${itemDef.displayName}!`,
     });
 
-    // Close both modals
+    // Close both modals and clear pending action
     setIsItemModalOpen(false);
     setIsInventoryOpen(false);
+    setPendingAction(null);
   };
 
   // Legacy action handler for non-item interactions
@@ -482,7 +493,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Sing</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('medicine', 'medicine')}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -490,7 +501,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Medicine</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('hygiene', 'clean')}
               variant="outline"
               className="h-16 flex flex-col gap-1"
             >
@@ -505,7 +516,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         return (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('food', 'feed')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
@@ -513,7 +524,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Feed</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('hygiene', 'clean')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
             >
@@ -529,7 +540,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('medicine', 'medicine')}
               disabled={isInteracting}
               variant="outline"
               className="h-16 flex flex-col gap-1"
@@ -545,7 +556,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
         return (
           <div className="grid grid-cols-2 gap-3">
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('food', 'feed')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             >
@@ -553,7 +564,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Feed</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('hygiene', 'clean')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-green-500 to-teal-500 hover:from-green-600 hover:to-teal-600"
             >
@@ -569,7 +580,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
-              onClick={() => setIsInventoryOpen(true)}
+              onClick={() => openInventory('medicine', 'medicine')}
               disabled={isInteracting}
               variant="outline"
               className="h-16 flex flex-col gap-1"
@@ -598,7 +609,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       return (
         <div className="grid grid-cols-2 gap-3">
           <Button
-            onClick={() => setIsInventoryOpen(true)}
+            onClick={() => openInventory('toy', 'play')}
             disabled={isInteracting}
             className="h-16 flex flex-col gap-1 bg-gradient-to-br from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600"
           >
@@ -862,10 +873,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <Button
                 variant="outline"
                 size="icon"
-                onClick={() => {
-                  setIsActionsOpen(false);
-                  setIsInventoryOpen(true);
-                }}
+                onClick={() => openInventory('all', null)}
                 className="rounded-full h-12 w-12"
               >
                 <Backpack className="h-5 w-5" />
@@ -917,7 +925,14 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       </div>
 
       {/* INVENTORY MODAL */}
-      <Dialog open={isInventoryOpen} onOpenChange={setIsInventoryOpen}>
+      <Dialog open={isInventoryOpen} onOpenChange={(open) => {
+        setIsInventoryOpen(open);
+        if (!open) {
+          // Reset tab and pending action when closing
+          setSelectedInventoryTab('all');
+          setPendingAction(null);
+        }
+      }}>
         <DialogContent className="w-[94vw] max-w-2xl max-h-[80vh] flex flex-col p-0 rounded-2xl gap-0">
           {/* Fixed header */}
           <DialogHeader className="flex-none px-6 py-4 border-b border-purple-100 dark:border-[hsl(250,25%,22%)]">
@@ -926,7 +941,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
           {/* Scrollable content area */}
           <div className="flex-1 overflow-y-auto">
-            <Tabs defaultValue="all" className="flex flex-col h-full">
+            <Tabs value={selectedInventoryTab} onValueChange={(value) => setSelectedInventoryTab(value as BlobbiItemCategory | 'all')} className="flex flex-col h-full">
               {/* Fixed tabs - 2 rows on mobile, single row on desktop */}
               <div className="flex-none px-4 pt-4 pb-3 border-b border-purple-100/50 dark:border-[hsl(250,25%,22%)]/50">
                 <TabsList className="grid grid-cols-3 gap-2 h-auto bg-transparent p-0 sm:flex sm:flex-wrap sm:justify-center">
