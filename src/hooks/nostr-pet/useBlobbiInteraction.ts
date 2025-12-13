@@ -65,8 +65,20 @@ export const useBlobbiInteraction = (blobbiId: string) => {
   ): Promise<InteractResult> => {
     const { action, itemId, itemQuantity = 1 } = params;
 
+    console.log('[useBlobbiInteraction.interact] START', {
+      userPubkey: user?.pubkey,
+      hasNostr: !!nostr,
+      blobbiId,
+      hasBlobbi: !!blobbi,
+      blobbiStage: blobbi?.stage,
+      action,
+      itemId,
+      itemQuantity,
+    });
+
     // Validation: Must have user
     if (!user) {
+      console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No user');
       return {
         success: false,
         error: 'Must be logged in to interact',
@@ -75,6 +87,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
     // Validation: Must have nostr
     if (!nostr) {
+      console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No nostr client');
       return {
         success: false,
         error: 'Nostr client not available',
@@ -83,6 +96,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
     // Validation: Must have blobbi
     if (!blobbi) {
+      console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No blobbi');
       return {
         success: false,
         error: 'Blobbi not found',
@@ -91,6 +105,10 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
     // Validation: Action must be valid for life stage
     if (!isActionValidForStage(action, blobbi.stage)) {
+      console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Invalid action for stage', {
+        action,
+        stage: blobbi.stage,
+      });
       return {
         success: false,
         error: `Action "${action}" is not valid for ${blobbi.stage} stage`,
@@ -102,6 +120,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       const itemDef = getItemDefinition(itemId);
 
       if (!itemDef) {
+        console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Item not found', { itemId });
         return {
           success: false,
           error: `Item "${itemId}" not found`,
@@ -110,6 +129,11 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
       // Check stage compatibility
       if (!itemDef.stages.includes(blobbi.stage)) {
+        console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Item incompatible with stage', {
+          itemId,
+          itemStages: itemDef.stages,
+          blobbiStage: blobbi.stage,
+        });
         return {
           success: false,
           error: `Item "${itemDef.displayName}" cannot be used on ${blobbi.stage} stage`,
@@ -120,6 +144,11 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       if (profile) {
         const storageItem = profile.storage?.find(s => s.itemId === itemId);
         if (!storageItem || storageItem.quantity < itemQuantity) {
+          console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Insufficient inventory', {
+            itemId,
+            need: itemQuantity,
+            have: storageItem?.quantity || 0,
+          });
           return {
             success: false,
             error: `You don't have enough ${itemDef.displayName}. Need ${itemQuantity}, have ${storageItem?.quantity || 0}`,
@@ -130,11 +159,17 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
     // Validation: Check if Blobbi is sleeping (can only wake)
     if (blobbi.isSleeping && action !== 'wake') {
+      console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Blobbi is sleeping', {
+        action,
+        isSleeping: blobbi.isSleeping,
+      });
       return {
         success: false,
         error: `${blobbi.name} is sleeping. Wake them up first!`,
       };
     }
+
+    console.log('[useBlobbiInteraction.interact] All validations passed');
 
     try {
       // 1. Compute PURE DELTAS for optimistic update
@@ -229,6 +264,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       }
 
       // 4. Execute full v2 interaction flow (31125 → 14919 → 31124)
+      console.log('[useBlobbiInteraction.interact] Starting executeInteractionFlow...');
       const flowResult = await executeInteractionFlow(
         nostr,
         {
@@ -241,7 +277,16 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         user.pubkey
       );
 
+      console.log('[useBlobbiInteraction.interact] executeInteractionFlow returned', {
+        success: flowResult.success,
+        error: flowResult.error,
+      });
+
       if (!flowResult.success) {
+        console.error('[useBlobbiInteraction.interact] Flow failed, rolling back optimistic updates', {
+          error: flowResult.error,
+        });
+
         // Rollback optimistic updates on failure
         if (previousStatusList) {
           queryClient.setQueryData(statusQueryKey, previousStatusList);
@@ -258,12 +303,14 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       }
 
       // Success!
+      console.log('[useBlobbiInteraction.interact] SUCCESS - interaction complete');
       return {
         success: true,
         newStats: flowResult.newStats || newStats,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[useBlobbiInteraction.interact] UNEXPECTED ERROR', error);
       return {
         success: false,
         error: errorMessage,

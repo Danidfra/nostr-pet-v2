@@ -143,16 +143,9 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const { blobbis: blobbiStatusList, isLoading, isInitialLoading, error } = useMyBlobbis();
 
   // Convert BlobbiStatus to legacy Blobbi type for compatibility
-  // Use JSON.stringify for stable dependency comparison to prevent infinite re-renders
   const blobbis = useMemo(() => {
-    console.log('[HomeScreen] blobbis from hook:', blobbiStatusList);
     return mapBlobbiStatusListToBlobbis(blobbiStatusList);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [JSON.stringify(blobbiStatusList)]); // Use stringified version for stable comparison
-
-  console.log('[HomeScreen] mapped blobbis:', blobbis);
-  console.log('[HomeScreen] isLoading:', isLoading);
-  console.log('[HomeScreen] isInitialLoading:', isInitialLoading);
+  }, [blobbiStatusList]); // Direct dependency - let React handle equality
   const [currentRoom, setCurrentRoom] = useState<Room>('MY_BLOBBI');
   const [currentBlobbiIndex, setCurrentBlobbiIndex] = useState(0);
   const [isActionsOpen, setIsActionsOpen] = useState(false);
@@ -174,8 +167,13 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   // Get all items for shop
   const allItems = useMemo(() => getAllItems(), []);
 
+  // Get current Blobbi ID (stable reference)
+  const currentBlobbiId = useMemo(() => {
+    return blobbis[currentBlobbiIndex]?.id || '';
+  }, [blobbis, currentBlobbiIndex]);
+
   // Get interaction hook for current Blobbi
-  const { interact, isLoading: isInteracting } = useBlobbiInteraction(blobbis[currentBlobbiIndex]?.id || '');
+  const { interact, isLoading: isInteracting } = useBlobbiInteraction(currentBlobbiId);
 
   // Loading state
   if (isInitialLoading) {
@@ -347,10 +345,22 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
 
   // Handle using item from modal (with quantity support)
   const handleUseItemFromModal = async (itemId: string, quantity: number) => {
-    if (!currentBlobbi) return;
+    console.log('[HomeScreen.handleUseItemFromModal] START', {
+      blobbiId: currentBlobbi?.id,
+      blobbiLifeStage: currentBlobbi?.lifeStage,
+      pendingAction,
+      itemId,
+      quantity,
+    });
+
+    if (!currentBlobbi) {
+      console.error('[HomeScreen.handleUseItemFromModal] No current blobbi');
+      return;
+    }
 
     const itemDef = getItemDefinition(itemId);
     if (!itemDef) {
+      console.error('[HomeScreen.handleUseItemFromModal] Item not found', { itemId });
       toast({
         title: 'Error',
         description: 'Item not found',
@@ -366,10 +376,26 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       itemDef.category === 'medicine' ? 'medicine' :
       itemDef.category === 'hygiene' ? 'clean' : 'feed');
 
+    console.log('[HomeScreen.handleUseItemFromModal] Computed action', {
+      action,
+      fromPendingAction: !!pendingAction,
+      itemCategory: itemDef.category,
+    });
+
+    console.log('[HomeScreen.handleUseItemFromModal] Calling interact()...');
+
     // Use the new v2 system with quantity support
     const result = await interact({ action, itemId, itemQuantity: quantity });
 
+    console.log('[HomeScreen.handleUseItemFromModal] interact() returned', {
+      success: result.success,
+      error: result.error,
+    });
+
     if (!result.success) {
+      console.error('[HomeScreen.handleUseItemFromModal] Interaction failed', {
+        error: result.error,
+      });
       toast({
         title: 'Error',
         description: result.error || 'Failed to use item',
@@ -379,6 +405,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
     }
 
     // Success! Show toast
+    console.log('[HomeScreen.handleUseItemFromModal] SUCCESS');
     toast({
       title: 'Success!',
       description: `${currentBlobbi.name} used ${quantity}x ${itemDef.displayName}!`,
