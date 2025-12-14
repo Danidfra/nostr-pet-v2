@@ -267,6 +267,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       console.log('[useBlobbiInteraction.interact] Starting executeInteractionFlow...');
       const flowResult = await executeInteractionFlow(
         nostr,
+        user.signer,
         {
           blobbi,
           action,

@@ -10,19 +10,23 @@
  * - If 31125 fails → stop
  * - If 14919 fails → rollback optimistic UI
  * - 31124 must preserve all existing tags, updating only changed ones
+ *
+ * CRITICAL: All events are now properly signed before publishing
  */
 
-import type { NostrEvent } from '@nostrify/nostrify';
+import type { NostrEvent, NostrSigner } from '@nostrify/nostrify';
 import type { BlobbiStatus } from './status-31124/types';
 import type { BlobbonautProfile } from './profile-31125/types';
 import type { StorageItem } from './core/types';
 import type { BlobbiAction, BlobbiStatChange } from './interaction-14919-v2/types';
+import type { UnsignedEvent } from '@/lib/nostr/types';
 import { buildBlobbonautProfileEvent } from './profile-31125/build';
 import { buildInteractionV2Event } from './interaction-14919-v2/build';
 import { mapActionToCategory } from './interaction-14919-v2/helpers';
 import { getItemDefinition } from '@/lib/blobbi-items';
 import { applyBlobbiInteraction, getInteractionRewards, clampStat } from '@/lib/blobbi-interaction-logic';
 import { statToTag, getAllStatTagNames } from './core/stat-mapping';
+import { publishSignedEvent } from '@/lib/nostr/publisher';
 
 /**
  * Parameters for the interaction flow
@@ -54,9 +58,12 @@ export interface InteractionFlowResult {
  * 1. Update inventory (31125) - only if item used
  * 2. Publish interaction event (14919 v2)
  * 3. Update Blobbi state (31124)
+ *
+ * CRITICAL: All events are properly signed before publishing
  */
 export async function executeInteractionFlow(
-  nostr: { event: (event: Omit<NostrEvent, 'id' | 'sig'>) => Promise<void> },
+  nostr: { event: (event: NostrEvent) => Promise<void> },
+  signer: NostrSigner | undefined,
   params: InteractionFlowParams,
   ownerPubkey: string
 ): Promise<InteractionFlowResult> {
@@ -119,17 +126,21 @@ export async function executeInteractionFlow(
         newStorage: updatedStorage.map(s => ({ itemId: s.itemId, qty: s.quantity })),
       });
 
-      try {
-        await nostr.event(inventoryEventUnsigned);
-        inventoryEvent = { ...inventoryEventUnsigned, id: '', sig: '' } as NostrEvent;
-        console.log('[executeInteractionFlow] STEP 1: Publish 31125 OK');
-      } catch (error) {
-        console.error('[executeInteractionFlow] STEP 1: Publish 31125 FAILED', error);
+      // Sign and publish inventory event
+      const inventoryResult = await publishSignedEvent(nostr as never, signer, inventoryEventUnsigned);
+
+      if (!inventoryResult.success) {
+        console.error('[executeInteractionFlow] STEP 1: Publish 31125 FAILED', inventoryResult.error);
         return {
           success: false,
-          error: `Failed to update inventory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: `Failed to update inventory: ${inventoryResult.error}`,
         };
       }
+
+      inventoryEvent = inventoryResult.event;
+      console.log('[executeInteractionFlow] STEP 1: Publish 31125 OK', {
+        id: inventoryEvent?.id.slice(0, 16) + '...',
+      });
     }
 
     // ============================================================
@@ -192,18 +203,21 @@ export async function executeInteractionFlow(
       tagsCount: interactionEventUnsigned.tags.length,
     });
 
-    let interactionEvent: NostrEvent;
-    try {
-      await nostr.event(interactionEventUnsigned);
-      interactionEvent = { ...interactionEventUnsigned, id: '', sig: '' } as NostrEvent;
-      console.log('[executeInteractionFlow] STEP 2: Publish 14919 v2 OK');
-    } catch (error) {
-      console.error('[executeInteractionFlow] STEP 2: Publish 14919 v2 FAILED', error);
+    // Sign and publish interaction event
+    const interactionResult = await publishSignedEvent(nostr as never, signer, interactionEventUnsigned);
+
+    if (!interactionResult.success) {
+      console.error('[executeInteractionFlow] STEP 2: Publish 14919 v2 FAILED', interactionResult.error);
       return {
         success: false,
-        error: `Failed to publish interaction: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `Failed to publish interaction: ${interactionResult.error}`,
       };
     }
+
+    const interactionEvent = interactionResult.event!;
+    console.log('[executeInteractionFlow] STEP 2: Publish 14919 v2 OK', {
+      id: interactionEvent.id.slice(0, 16) + '...',
+    });
 
     // ============================================================
     // STEP 3: Update Blobbi State (31124)
@@ -315,18 +329,21 @@ export async function executeInteractionFlow(
       tagsCount: statusEventUnsigned.tags.length,
     });
 
-    let statusEvent: NostrEvent;
-    try {
-      await nostr.event(statusEventUnsigned);
-      statusEvent = { ...statusEventUnsigned, id: '', sig: '' } as NostrEvent;
-      console.log('[executeInteractionFlow] STEP 3: Publish 31124 OK');
-    } catch (error) {
-      console.error('[executeInteractionFlow] STEP 3: Publish 31124 FAILED', error);
+    // Sign and publish status event
+    const statusResult = await publishSignedEvent(nostr as never, signer, statusEventUnsigned);
+
+    if (!statusResult.success) {
+      console.error('[executeInteractionFlow] STEP 3: Publish 31124 FAILED', statusResult.error);
       return {
         success: false,
-        error: `Failed to update Blobbi state: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        error: `Failed to update Blobbi state: ${statusResult.error}`,
       };
     }
+
+    const statusEvent = statusResult.event!;
+    console.log('[executeInteractionFlow] STEP 3: Publish 31124 OK', {
+      id: statusEvent.id.slice(0, 16) + '...',
+    });
 
     // Success!
     console.log('[executeInteractionFlow] ALL STEPS COMPLETE - SUCCESS');

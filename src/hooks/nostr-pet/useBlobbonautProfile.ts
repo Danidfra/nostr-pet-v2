@@ -13,6 +13,7 @@ import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useCallback, useMemo, useEffect } from 'react';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useNostrPublisher } from '@/hooks/useNostrPublisher';
 import { useNostrClient } from '@/lib/nostr-pet/nostr/client';
 import { getGlobalSubscriptionManager } from '@/lib/nostr-pet/nostr/subscriptions';
 import { defaultStorage } from '@/lib/nostr-pet/core/storage';
@@ -62,6 +63,7 @@ export const useBlobbonautProfile = (profileId?: string) => {
   const { nostr } = useNostr();
   const queryClient = useQueryClient();
   const client = useNostrClient();
+  const { publishSigned } = useNostrPublisher();
 
   // Determine effective profile ID and pubkey for queries
   const effectiveProfileId = profileId;
@@ -277,12 +279,18 @@ export const useBlobbonautProfile = (profileId?: string) => {
       // Apply updates
       const updatedProfile = updateBlobbonautProfile(profileToUpdate, updateData);
 
-      // Publish the updated event
-      const publishResult = await client.publish(buildBlobbonautProfileEvent(updatedProfile));
+      // Build unsigned event
+      const unsignedEvent = buildBlobbonautProfileEvent(updatedProfile);
 
-      if (!publishResult.success || !publishResult.data?.eventId) {
-        throw new Error(publishResult.data?.error || 'Failed to publish profile update');
+      // Sign and publish the event
+      const publishResult = await publishSigned(unsignedEvent);
+
+      if (!publishResult.success) {
+        throw new Error(publishResult.error || 'Failed to publish profile update');
       }
+
+      // Update the profile with the signed event
+      updatedProfile.event = publishResult.event!;
 
       // Update cache immediately
       updateProfileData(updatedProfile);
@@ -290,7 +298,7 @@ export const useBlobbonautProfile = (profileId?: string) => {
       return {
         success: true,
         data: updatedProfile,
-        eventId: publishResult.data?.eventId,
+        eventId: publishResult.event?.id,
         timestamp: Date.now(),
       };
     },
@@ -309,12 +317,18 @@ export const useBlobbonautProfile = (profileId?: string) => {
       // Create initial profile
       const profile = createInitialBlobbonautProfile(params.ownerPubkey, params.name);
 
-      // Publish the event
-      const publishResult = await client.publish(buildBlobbonautProfileEvent(profile));
+      // Build unsigned event
+      const unsignedEvent = buildBlobbonautProfileEvent(profile);
 
-      if (!publishResult.success || !publishResult.data?.eventId) {
-        throw new Error(publishResult.data?.error || 'Failed to publish profile');
+      // Sign and publish the event
+      const publishResult = await publishSigned(unsignedEvent);
+
+      if (!publishResult.success) {
+        throw new Error(publishResult.error || 'Failed to publish profile');
       }
+
+      // Update the profile with the signed event
+      profile.event = publishResult.event!;
 
       // Update cache immediately
       updateProfileData(profile);
@@ -322,7 +336,7 @@ export const useBlobbonautProfile = (profileId?: string) => {
       return {
         success: true,
         data: profile,
-        eventId: publishResult.data?.eventId,
+        eventId: publishResult.event?.id,
         timestamp: Date.now(),
       };
     },
