@@ -26,6 +26,7 @@ import {
   mergeTagArrays
 } from '../core/tags';
 import { BLOBBONAUT_PROFILE_KIND } from '../core/kinds';
+import { normalizeTags } from '../core/tag-normalization';
 
 /**
  * Generate a new profile ID in the new format
@@ -182,11 +183,11 @@ export const buildBlobbonautProfileEvent = (profile: BlobbonautProfile): Unsigne
     additionalTags      // Additional tags last
   );
 
-  // Build the UNSIGNED event
+  // Build the UNSIGNED event with normalized tags
   const event: UnsignedEvent = {
     kind: BLOBBONAUT_PROFILE_KIND,
     content: '', // CRITICAL: Must always be empty string
-    tags: finalTags,
+    tags: normalizeTags(finalTags), // CRITICAL: Normalize to prevent duplicates
     created_at: Math.floor(Date.now() / 1000),
   };
 

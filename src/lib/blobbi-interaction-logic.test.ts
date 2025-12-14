@@ -327,12 +327,56 @@ describe('getInteractionRewards', () => {
 });
 
 /**
+ * CRITICAL: Egg Stat Mapping Verification
+ *
+ * Verifies that healthDelta → shellIntegrity conversion is 1:1
+ * with NO hidden scaling or doubling.
+ */
+describe('CRITICAL: Egg Stat Mapping (1:1 Conversion)', () => {
+  it('should convert healthDelta to shellIntegrity 1:1 for eggs (no scaling)', () => {
+    const blobbi = createMockBlobbi('egg');
+
+    // Test various health delta values
+    const testCases = [
+      { itemId: 'med_vitamins', healthDelta: 20, expected: 20 },
+      { itemId: 'med_super', healthDelta: 50, expected: 50 },
+      { itemId: 'med_elixir', healthDelta: 80, expected: 80 },
+      { itemId: 'med_bandage', healthDelta: 15, expected: 15 },
+      { itemId: 'med_shell_repair', healthDelta: 30, expected: 30 },
+      { itemId: 'med_calcium', healthDelta: 35, expected: 35 },
+    ];
+
+    for (const testCase of testCases) {
+      const deltas = applyBlobbiInteraction(blobbi, 'egg', 'medicine', testCase.itemId);
+
+      // CRITICAL: 1:1 conversion, no scaling
+      expect(deltas.shellIntegrity).toBe(testCase.expected);
+      expect(deltas.shellIntegrity).toBe(testCase.healthDelta);
+
+      // Should NOT have health delta for eggs
+      expect(deltas.health).toBeUndefined();
+    }
+  });
+
+  it('should convert base medicine action health delta 1:1 for eggs', () => {
+    const blobbi = createMockBlobbi('egg');
+
+    // Base medicine action (no item) has health: 20
+    const deltas = applyBlobbiInteraction(blobbi, 'egg', 'medicine');
+
+    // Should convert 20 → 20 (1:1)
+    expect(deltas.shellIntegrity).toBe(20);
+    expect(deltas.health).toBeUndefined();
+  });
+});
+
+/**
  * CRITICAL REGRESSION TEST
- * 
+ *
  * This test verifies the fix for the med_super bug where:
  * - Expected: healthDelta: 50 → shell_integrity:50 for eggs
  * - Bug: Was producing shell_integrity:70 (20 base + 50 item)
- * 
+ *
  * This test must always pass to prevent regression.
  */
 describe('CRITICAL: med_super Regression Test', () => {

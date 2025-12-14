@@ -26,6 +26,7 @@ import { getItemDefinition } from '@/lib/blobbi-items';
 import { applyBlobbiInteraction, getInteractionRewards, clampStat } from '@/lib/blobbi-interaction-logic';
 import { statToTag, getAllStatTagNames } from './core/stat-mapping';
 import { publishSignedEvent } from '@/lib/nostr/publisher';
+import { updateAndNormalizeTags, logTagStats } from './core/tag-normalization';
 
 /**
  * Parameters for the interaction flow
@@ -258,12 +259,16 @@ export async function executeInteractionFlow(
       newStats.lastSleepUpdate = undefined;
     }
 
-    // Build updated status event preserving all original tags
-    const statusTags: string[][] = [];
+    // ============================================================
+    // CRITICAL: Build updated status event with tag normalization
+    // ============================================================
 
-    // Get all stat tag names for filtering
+    // Log original event stats (dev mode only)
+    logTagStats(blobbi.event.tags, 'Original 31124 tags');
+
+    // Collect tags to remove (all tags we're updating)
     const statTagNames = getAllStatTagNames();
-    const tagsToSkip = new Set([
+    const tagsToRemove = [
       ...statTagNames,
       'experience',
       'care_streak',
@@ -277,42 +282,49 @@ export async function executeInteractionFlow(
       'state',
       'sleep_started_at',
       'last_sleep_update',
-    ]);
+    ];
 
-    // Copy all tags from original event except those we're updating
-    for (const tag of blobbi.event.tags) {
-      const tagName = tag[0];
-      if (!tagsToSkip.has(tagName)) {
-        statusTags.push(tag);
-      }
-    }
+    // Collect new tags to add
+    const tagsToAdd: string[][] = [];
 
     // Add updated stat tags (using snake_case)
-    if (newStats.hunger !== undefined) statusTags.push(['hunger', newStats.hunger.toString()]);
-    if (newStats.happiness !== undefined) statusTags.push(['happiness', newStats.happiness.toString()]);
-    if (newStats.health !== undefined) statusTags.push(['health', newStats.health.toString()]);
-    if (newStats.hygiene !== undefined) statusTags.push(['hygiene', newStats.hygiene.toString()]);
-    if (newStats.energy !== undefined) statusTags.push(['energy', newStats.energy.toString()]);
-    if (newStats.eggTemperature !== undefined) statusTags.push(['egg_temperature', newStats.eggTemperature.toString()]);
-    if (newStats.shellIntegrity !== undefined) statusTags.push(['shell_integrity', newStats.shellIntegrity.toString()]);
+    if (newStats.hunger !== undefined) tagsToAdd.push(['hunger', newStats.hunger.toString()]);
+    if (newStats.happiness !== undefined) tagsToAdd.push(['happiness', newStats.happiness.toString()]);
+    if (newStats.health !== undefined) tagsToAdd.push(['health', newStats.health.toString()]);
+    if (newStats.hygiene !== undefined) tagsToAdd.push(['hygiene', newStats.hygiene.toString()]);
+    if (newStats.energy !== undefined) tagsToAdd.push(['energy', newStats.energy.toString()]);
+    if (newStats.eggTemperature !== undefined) tagsToAdd.push(['egg_temperature', newStats.eggTemperature.toString()]);
+    if (newStats.shellIntegrity !== undefined) tagsToAdd.push(['shell_integrity', newStats.shellIntegrity.toString()]);
 
     // Add other updated tags
-    if (newStats.experience !== undefined) statusTags.push(['experience', newStats.experience.toString()]);
-    if (newStats.careStreak !== undefined) statusTags.push(['care_streak', newStats.careStreak.toString()]);
-    if (newStats.lastInteraction !== undefined) statusTags.push(['last_interaction', newStats.lastInteraction.toString()]);
-    if (newStats.lastMeal !== undefined) statusTags.push(['last_meal', newStats.lastMeal.toString()]);
-    if (newStats.lastClean !== undefined) statusTags.push(['last_clean', newStats.lastClean.toString()]);
-    if (newStats.lastMedicine !== undefined) statusTags.push(['last_medicine', newStats.lastMedicine.toString()]);
-    if (newStats.lastWarm !== undefined) statusTags.push(['last_warm', newStats.lastWarm.toString()]);
-    if (newStats.lastSing !== undefined) statusTags.push(['last_sing', newStats.lastSing.toString()]);
-    if (newStats.isSleeping !== undefined) statusTags.push(['is_sleeping', newStats.isSleeping.toString()]);
-    if (newStats.state !== undefined) statusTags.push(['state', newStats.state]);
-    if (newStats.sleepStartedAt !== undefined) statusTags.push(['sleep_started_at', newStats.sleepStartedAt.toString()]);
-    if (newStats.lastSleepUpdate !== undefined) statusTags.push(['last_sleep_update', newStats.lastSleepUpdate.toString()]);
+    if (newStats.experience !== undefined) tagsToAdd.push(['experience', newStats.experience.toString()]);
+    if (newStats.careStreak !== undefined) tagsToAdd.push(['care_streak', newStats.careStreak.toString()]);
+    if (newStats.lastInteraction !== undefined) tagsToAdd.push(['last_interaction', newStats.lastInteraction.toString()]);
+    if (newStats.lastMeal !== undefined) tagsToAdd.push(['last_meal', newStats.lastMeal.toString()]);
+    if (newStats.lastClean !== undefined) tagsToAdd.push(['last_clean', newStats.lastClean.toString()]);
+    if (newStats.lastMedicine !== undefined) tagsToAdd.push(['last_medicine', newStats.lastMedicine.toString()]);
+    if (newStats.lastWarm !== undefined) tagsToAdd.push(['last_warm', newStats.lastWarm.toString()]);
+    if (newStats.lastSing !== undefined) tagsToAdd.push(['last_sing', newStats.lastSing.toString()]);
+    if (newStats.isSleeping !== undefined) tagsToAdd.push(['is_sleeping', newStats.isSleeping.toString()]);
+    if (newStats.state !== undefined) tagsToAdd.push(['state', newStats.state]);
+    if (newStats.sleepStartedAt !== undefined) tagsToAdd.push(['sleep_started_at', newStats.sleepStartedAt.toString()]);
+    if (newStats.lastSleepUpdate !== undefined) tagsToAdd.push(['last_sleep_update', newStats.lastSleepUpdate.toString()]);
+
+    // CRITICAL: Use updateAndNormalizeTags to prevent duplication
+    const statusTags = updateAndNormalizeTags(
+      blobbi.event.tags,
+      tagsToRemove,
+      tagsToAdd
+    );
+
+    // Log normalized event stats (dev mode only)
+    logTagStats(statusTags, 'Normalized 31124 tags');
 
     console.log('[executeInteractionFlow] STEP 3: Publish 31124 START', {
       changedStats: Object.keys(newStats),
       newStatsValues: newStats,
+      originalTagCount: blobbi.event.tags.length,
+      normalizedTagCount: statusTags.length,
     });
 
     const statusEventUnsigned: Omit<NostrEvent, 'id' | 'sig'> = {
