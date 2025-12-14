@@ -24,7 +24,7 @@ import { buildInteractionV2Event } from './interaction-14919-v2/build';
 import { mapActionToCategory } from './interaction-14919-v2/helpers';
 import { getItemDefinition } from '@/lib/blobbi-items';
 import { applyBlobbiInteraction, getInteractionRewards, clampStat } from '@/lib/blobbi-interaction-logic';
-import { statToTag, getAllStatTagNames } from './core/stat-mapping';
+import { statToTag } from './core/stat-mapping';
 import { publishSignedEvent } from '@/lib/nostr/publisher';
 import { updateAndNormalizeTags, logTagStats } from './core/tag-normalization';
 
@@ -37,6 +37,72 @@ export interface InteractionFlowParams {
   itemId?: string;
   itemQuantity?: number;
   profile?: BlobbonautProfile;
+}
+
+/**
+ * Get the list of tags that should be removed for a specific action
+ *
+ * CRITICAL: This function determines which tags to update based on:
+ * 1. Stats that actually changed (keys in multipliedDeltas)
+ * 2. Timestamps/state fields that are explicitly modified by the action
+ *
+ * This ensures unchanged tags are preserved in the new event.
+ *
+ * @param action - The interaction action being performed
+ * @param multipliedDeltas - Object containing only the stats that changed
+ * @returns Array of tag names to remove (will be replaced with new values)
+ */
+function getTagsToUpdateForAction(
+  action: BlobbiAction,
+  multipliedDeltas: Record<string, number>
+): string[] {
+  const tagsToRemove: string[] = [];
+
+  // 1. Add stat tags that actually changed (convert camelCase to snake_case)
+  Object.keys(multipliedDeltas).forEach(statKey => {
+    const tagName = statToTag(statKey);
+    tagsToRemove.push(tagName);
+  });
+
+  // 2. Add universal tags that always update on any interaction
+  tagsToRemove.push('experience'); // Always updated with rewards
+  tagsToRemove.push('care_streak'); // Always updated with care points
+  tagsToRemove.push('last_interaction'); // Always updated to current time
+
+  // 3. Add action-specific timestamp/state tags
+  switch (action) {
+    case 'feed':
+      tagsToRemove.push('last_meal');
+      break;
+    case 'clean':
+      tagsToRemove.push('last_clean');
+      break;
+    case 'medicine':
+      tagsToRemove.push('last_medicine');
+      break;
+    case 'warm':
+      tagsToRemove.push('last_warm');
+      break;
+    case 'sing':
+      tagsToRemove.push('last_sing');
+      break;
+    case 'sleep':
+      // Sleep action sets sleeping state
+      tagsToRemove.push('is_sleeping');
+      tagsToRemove.push('state');
+      tagsToRemove.push('sleep_started_at');
+      tagsToRemove.push('last_sleep_update');
+      break;
+    case 'wake':
+      // Wake action clears sleeping state
+      tagsToRemove.push('is_sleeping');
+      tagsToRemove.push('state');
+      tagsToRemove.push('sleep_started_at');
+      tagsToRemove.push('last_sleep_update');
+      break;
+  }
+
+  return tagsToRemove;
 }
 
 /**
@@ -266,25 +332,11 @@ export async function executeInteractionFlow(
     // Log original event stats (dev mode only)
     logTagStats(blobbi.event.tags, 'Original 31124 tags');
 
-    // Collect tags to remove (all tags we're updating)
-    const statTagNames = getAllStatTagNames();
-    const tagsToRemove = [
-      ...statTagNames,
-      'experience',
-      'care_streak',
-      'last_interaction',
-      'last_meal',
-      'last_clean',
-      'last_medicine',
-      'last_warm',
-      'last_sing',
-      'is_sleeping',
-      'state',
-      'sleep_started_at',
-      'last_sleep_update',
-    ];
+    // OPTION A: Dynamically compute tags to remove based on what actually changed
+    // This ensures unchanged tags are preserved
+    const tagsToRemove = getTagsToUpdateForAction(action, multipliedDeltas);
 
-    // Collect new tags to add
+    // Collect new tags to add (only for fields that actually changed)
     const tagsToAdd: string[][] = [];
 
     // Add updated stat tags (using snake_case)
@@ -310,7 +362,8 @@ export async function executeInteractionFlow(
     if (newStats.sleepStartedAt !== undefined) tagsToAdd.push(['sleep_started_at', newStats.sleepStartedAt.toString()]);
     if (newStats.lastSleepUpdate !== undefined) tagsToAdd.push(['last_sleep_update', newStats.lastSleepUpdate.toString()]);
 
-    // CRITICAL: Use updateAndNormalizeTags to prevent duplication
+    // CRITICAL: Use updateAndNormalizeTags to preserve unchanged tags
+    // Only tags in tagsToRemove are removed; all others are preserved
     const statusTags = updateAndNormalizeTags(
       blobbi.event.tags,
       tagsToRemove,
