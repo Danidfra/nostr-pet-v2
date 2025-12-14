@@ -10,6 +10,7 @@ import {
   INTERACTION_V2_ECOSYSTEM_TAGS,
 } from './types';
 import { formatStatChange } from './helpers';
+import { assertValidInteractionV2Event } from './validate';
 
 /**
  * Build a Kind 14919 v2 interaction event (unsigned)
@@ -71,11 +72,16 @@ export const buildInteractionV2Event = (
   const content = '';
 
   // Build event
-  return {
+  const event = {
     kind: BLOBBI_INTERACTION_KIND,
     pubkey: ownerPubkey,
     created_at: Math.floor(Date.now() / 1000),
     tags,
     content,
   };
+
+  // Validate before returning
+  assertValidInteractionV2Event(event);
+
+  return event;
 };

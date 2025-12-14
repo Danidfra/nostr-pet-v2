@@ -124,7 +124,7 @@ export const useBlobbonautProfile = (profileId?: string) => {
 
       const blobbiEvents = allEvents.filter(event => {
         const hasEcosystem = event.tags.some(([name, value]) =>
-          name === 'b' && value === 'blobbi:ecosystem:v1'
+          name === 'b' && (value === 'blobbi:ecosystem:v1' || value === 'blobbi:ecosystem:v2')
         );
         const hasTopic = event.tags.some(([name, value]) =>
           name === 't' && (value === 'blobbi' || value === 'Blobbi')

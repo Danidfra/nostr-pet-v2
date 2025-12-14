@@ -91,10 +91,10 @@ export const useMyBlobbis = () => {
     const allEvents = queryResult.data || [];
     console.log('[Blobbi Status] Received events:', allEvents.length);
 
-    // Filter for Blobbi ecosystem tags
+    // Filter for Blobbi ecosystem tags (accept both v1 and v2 for transitional compatibility)
     const blobbiEvents = allEvents.filter(event => {
       const hasEcosystem = event.tags.some(([name, value]) =>
-        name === 'b' && value === 'blobbi:ecosystem:v1'
+        name === 'b' && (value === 'blobbi:ecosystem:v1' || value === 'blobbi:ecosystem:v2')
       );
       const hasTopic = event.tags.some(([name, value]) =>
         name === 't' && (value === 'blobbi' || value === 'Blobbi')

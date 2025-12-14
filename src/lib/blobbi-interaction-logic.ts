@@ -95,40 +95,44 @@ export const applyBlobbiInteraction = (
 ): Record<string, number> => {
   const deltas: Record<string, number> = {};
 
-  // 1. Apply base interaction deltas
-  const baseDeltas = BASE_INTERACTION_DELTAS[action];
-  if (baseDeltas) {
-    Object.entries(baseDeltas).forEach(([key, delta]) => {
-      deltas[key] = delta;
-    });
-  }
+  // CRITICAL FIX: When an item is provided, use ONLY the item's deltas
+  // Items define their complete effect, not additive bonuses to base actions
+  // Base action deltas only apply when NO item is used
 
-  // 2. Apply item deltas (if item provided)
   if (itemId) {
+    // 1. Apply item deltas ONLY (no base action deltas)
     const itemDef = getItemDefinition(itemId);
     if (itemDef) {
-      // Apply standard stat deltas
+      // Apply standard stat deltas from item definition
       if (itemDef.hungerDelta !== undefined) {
-        deltas.hunger = (deltas.hunger || 0) + itemDef.hungerDelta;
+        deltas.hunger = itemDef.hungerDelta;
       }
       if (itemDef.happinessDelta !== undefined) {
-        deltas.happiness = (deltas.happiness || 0) + itemDef.happinessDelta;
+        deltas.happiness = itemDef.happinessDelta;
       }
       if (itemDef.energyDelta !== undefined) {
-        deltas.energy = (deltas.energy || 0) + itemDef.energyDelta;
+        deltas.energy = itemDef.energyDelta;
       }
       if (itemDef.hygieneDelta !== undefined) {
-        deltas.hygiene = (deltas.hygiene || 0) + itemDef.hygieneDelta;
+        deltas.hygiene = itemDef.hygieneDelta;
       }
       if (itemDef.healthDelta !== undefined) {
-        deltas.health = (deltas.health || 0) + itemDef.healthDelta;
+        deltas.health = itemDef.healthDelta;
       }
       if (itemDef.eggTemperatureDelta !== undefined) {
-        deltas.eggTemperature = (deltas.eggTemperature || 0) + itemDef.eggTemperatureDelta;
+        deltas.eggTemperature = itemDef.eggTemperatureDelta;
       }
       if (itemDef.shellIntegrityDelta !== undefined) {
-        deltas.shellIntegrity = (deltas.shellIntegrity || 0) + itemDef.shellIntegrityDelta;
+        deltas.shellIntegrity = itemDef.shellIntegrityDelta;
       }
+    }
+  } else {
+    // 2. Apply base interaction deltas ONLY when no item is used
+    const baseDeltas = BASE_INTERACTION_DELTAS[action];
+    if (baseDeltas) {
+      Object.entries(baseDeltas).forEach(([key, delta]) => {
+        deltas[key] = delta;
+      });
     }
   }
 

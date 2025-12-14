@@ -19,7 +19,6 @@ import type { BlobbiStatus } from './status-31124/types';
 import type { BlobbonautProfile } from './profile-31125/types';
 import type { StorageItem } from './core/types';
 import type { BlobbiAction, BlobbiStatChange } from './interaction-14919-v2/types';
-import type { UnsignedEvent } from '@/lib/nostr/types';
 import { buildBlobbonautProfileEvent } from './profile-31125/build';
 import { buildInteractionV2Event } from './interaction-14919-v2/build';
 import { mapActionToCategory } from './interaction-14919-v2/helpers';

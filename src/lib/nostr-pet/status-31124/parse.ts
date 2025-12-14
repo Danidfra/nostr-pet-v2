@@ -78,9 +78,11 @@ export const validateBlobbiStatusEvent = (event: NostrEvent): StatusValidationRe
     errors.push(`Invalid stage: ${stage}, expected egg, baby, or adult`);
   }
 
-  // Check ecosystem tags
-  if (!hasTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.ECOSYSTEM, ECOSYSTEM_TAGS.BLOBBI_ECOSYSTEM)) {
-    warnings.push('Missing ecosystem tag: b with value blobbi:ecosystem:v1');
+  // Check ecosystem tags (accept both v1 and v2 for transitional compatibility)
+  const hasV1 = hasTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.ECOSYSTEM, ECOSYSTEM_TAGS.BLOBBI_ECOSYSTEM);
+  const hasV2 = hasTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.ECOSYSTEM, 'blobbi:ecosystem:v2');
+  if (!hasV1 && !hasV2) {
+    warnings.push('Missing ecosystem tag: b with value blobbi:ecosystem:v1 or blobbi:ecosystem:v2');
   }
 
   if (!hasTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.TOPIC, ECOSYSTEM_TAGS.TOPIC_BLOBBI) &&
