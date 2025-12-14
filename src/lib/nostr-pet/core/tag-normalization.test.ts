@@ -176,6 +176,107 @@ describe('normalizeTags', () => {
     expect(normalized).toHaveLength(1);
     expect(normalized).toContainEqual(['custom', 'value2']);
   });
+
+  it('should preserve tag order (stable ordering)', () => {
+    const tags = [
+      ['t', 'blobbi'], // Multi-value, position 0
+      ['d', 'blobbi-123'], // Singleton, position 1
+      ['stage', 'egg'], // Singleton, position 2
+      ['hunger', '50'], // Singleton, position 3
+      ['t', 'pet'], // Multi-value, position 4
+      ['happiness', '60'], // Singleton, position 5
+      ['d', 'blobbi-456'], // Duplicate singleton, position 6 (last occurrence)
+    ];
+
+    const normalized = normalizeTags(tags);
+
+    // Expected order:
+    // - t: blobbi (position 0, multi-value)
+    // - stage: egg (position 2, singleton, only occurrence)
+    // - hunger: 50 (position 3, singleton, only occurrence)
+    // - t: pet (position 4, multi-value)
+    // - happiness: 60 (position 5, singleton, only occurrence)
+    // - d: blobbi-456 (position 6, singleton, last occurrence)
+
+    expect(normalized).toHaveLength(6);
+    expect(normalized[0]).toEqual(['t', 'blobbi']);
+    expect(normalized[1]).toEqual(['stage', 'egg']);
+    expect(normalized[2]).toEqual(['hunger', '50']);
+    expect(normalized[3]).toEqual(['t', 'pet']);
+    expect(normalized[4]).toEqual(['happiness', '60']);
+    expect(normalized[5]).toEqual(['d', 'blobbi-456']); // Last occurrence kept at its position
+  });
+
+  it('should NOT sort singleton tags alphabetically', () => {
+    const tags = [
+      ['z_tag', 'value_z'], // Alphabetically last
+      ['a_tag', 'value_a'], // Alphabetically first
+      ['m_tag', 'value_m'], // Alphabetically middle
+    ];
+
+    const normalized = normalizeTags(tags, {
+      singletonTags: ['z_tag', 'a_tag', 'm_tag'],
+      multiValueTags: [],
+    });
+
+    // Should preserve original order (z, a, m), NOT alphabetical (a, m, z)
+    expect(normalized).toHaveLength(3);
+    expect(normalized[0]).toEqual(['z_tag', 'value_z']);
+    expect(normalized[1]).toEqual(['a_tag', 'value_a']);
+    expect(normalized[2]).toEqual(['m_tag', 'value_m']);
+  });
+
+  it('should keep singleton at position of last occurrence', () => {
+    const tags = [
+      ['name', 'Alice'], // First occurrence, position 0
+      ['age', '25'], // Singleton, position 1
+      ['name', 'Bob'], // Last occurrence, position 2
+      ['city', 'NYC'], // Singleton, position 3
+    ];
+
+    const normalized = normalizeTags(tags, {
+      singletonTags: ['name', 'age', 'city'],
+      multiValueTags: [],
+    });
+
+    // Expected order:
+    // - age: 25 (position 1)
+    // - name: Bob (position 2, last occurrence)
+    // - city: NYC (position 3)
+
+    expect(normalized).toHaveLength(3);
+    expect(normalized[0]).toEqual(['age', '25']);
+    expect(normalized[1]).toEqual(['name', 'Bob']); // At position of last occurrence
+    expect(normalized[2]).toEqual(['city', 'NYC']);
+  });
+
+  it('should handle mixed multi-value and singleton with stable order', () => {
+    const tags = [
+      ['t', 'tag1'], // Multi-value, position 0
+      ['d', 'id1'], // Singleton, position 1
+      ['t', 'tag2'], // Multi-value, position 2
+      ['stage', 'egg'], // Singleton, position 3
+      ['t', 'tag1'], // Duplicate multi-value, position 4 (should be removed)
+      ['d', 'id2'], // Duplicate singleton, position 5 (last occurrence)
+      ['hunger', '50'], // Singleton, position 6
+    ];
+
+    const normalized = normalizeTags(tags);
+
+    // Expected order:
+    // - t: tag1 (position 0, first occurrence)
+    // - t: tag2 (position 2, unique)
+    // - stage: egg (position 3, only occurrence)
+    // - d: id2 (position 5, last occurrence)
+    // - hunger: 50 (position 6, only occurrence)
+
+    expect(normalized).toHaveLength(5);
+    expect(normalized[0]).toEqual(['t', 'tag1']);
+    expect(normalized[1]).toEqual(['t', 'tag2']);
+    expect(normalized[2]).toEqual(['stage', 'egg']);
+    expect(normalized[3]).toEqual(['d', 'id2']);
+    expect(normalized[4]).toEqual(['hunger', '50']);
+  });
 });
 
 describe('updateAndNormalizeTags', () => {

@@ -118,7 +118,8 @@ export const buildBooleanProfileTags = (profile: BlobbonautProfile): NostrTag[] 
   const tags: NostrTag[] = [];
 
   // Onboarding done flag
-  if (profile.onboardingDone) {
+  // CRITICAL: Include both true and false values, only skip if undefined
+  if (profile.onboardingDone !== undefined) {
     tags.push(...buildBooleanTag(BLOBBONAUT_PROFILE_TAG_NAMES.ONBOARDING_DONE, profile.onboardingDone));
   }
 

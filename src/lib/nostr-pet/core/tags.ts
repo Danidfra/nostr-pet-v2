@@ -263,12 +263,16 @@ export const buildAchievementTags = (achievements: string[]): NostrTag[] => {
 /**
  * Build boolean tags
  *
+ * CRITICAL: Returns tag for both true and false values.
+ * Only returns empty array if value is undefined/null.
+ *
  * @param tagName - Name of the boolean tag
  * @param value - Boolean value
- * @returns Single boolean tag or empty array
+ * @returns Single boolean tag with 'true' or 'false' value
  */
 export const buildBooleanTag = (tagName: string, value: boolean): NostrTag[] => {
-  return value ? [[tagName, 'true']] : [];
+  // Return tag for both true and false
+  return [[tagName, value ? 'true' : 'false']];
 };
 
 /**

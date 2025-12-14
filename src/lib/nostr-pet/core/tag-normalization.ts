@@ -119,13 +119,14 @@ const isDevelopment = (): boolean => {
  * Normalize tags by removing duplicates and enforcing singleton constraints
  *
  * Rules:
- * - Singleton tags: Keep only the last occurrence
+ * - Singleton tags: Keep only the last occurrence, preserve original position
  * - Multi-value tags: Remove exact duplicates, preserve order
  * - Unknown tags: Treat as singleton by default (conservative)
+ * - Order stability: Tags remain in their original positions (no sorting, no reordering)
  *
  * @param tags - Array of tag tuples to normalize
  * @param options - Normalization options
- * @returns Normalized tags array
+ * @returns Normalized tags array with stable ordering
  */
 export function normalizeTags(
   tags: string[][],
@@ -140,35 +141,66 @@ export function normalizeTags(
   const singletonSet = new Set(singletonTags);
   const multiValueSet = new Set(multiValueTags);
 
-  // Track seen tags
-  const singletonMap = new Map<string, string[]>(); // tagName -> lastValue
-  const multiValueSeen = new Set<string>(); // serialized tag for deduplication
-  const result: string[][] = [];
+  // Track singleton tags: tagName -> { tag: string[], lastIndex: number }
+  const singletonMap = new Map<string, { tag: string[]; lastIndex: number }>();
 
-  // Process tags in order
-  for (const tag of tags) {
+  // Track seen multi-value tags for deduplication
+  const multiValueSeen = new Set<string>();
+
+  // First pass: identify last occurrence of each singleton tag
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
     if (!tag || tag.length === 0) {
-      continue; // Skip empty tags
+      continue;
     }
 
     const tagName = tag[0];
-
-    // Determine if this is a singleton or multi-value tag
     const isSingleton = singletonSet.has(tagName);
     const isMultiValue = multiValueSet.has(tagName);
 
-    if (isSingleton) {
-      // Singleton: Keep only the last occurrence
+    if (isSingleton || !isMultiValue) {
+      // Singleton or unknown tag (treated as singleton)
       const existing = singletonMap.get(tagName);
       if (existing && logWarnings) {
         console.warn(
           `[TagNormalize] Duplicate singleton tag "${tagName}":`,
-          `Replacing [${existing.join(', ')}] with [${tag.join(', ')}]`
+          `Replacing [${existing.tag.join(', ')}] with [${tag.join(', ')}]`
         );
       }
-      singletonMap.set(tagName, tag);
-    } else if (isMultiValue) {
-      // Multi-value: Remove exact duplicates
+      singletonMap.set(tagName, { tag, lastIndex: i });
+    }
+  }
+
+  // Second pass: build result with stable ordering
+  const result: string[][] = [];
+  const processedSingletons = new Set<string>();
+
+  for (let i = 0; i < tags.length; i++) {
+    const tag = tags[i];
+    if (!tag || tag.length === 0) {
+      continue;
+    }
+
+    const tagName = tag[0];
+    const isSingleton = singletonSet.has(tagName);
+    const isMultiValue = multiValueSet.has(tagName);
+
+    if (isSingleton || !isMultiValue) {
+      // Singleton or unknown tag
+      if (processedSingletons.has(tagName)) {
+        // Already processed this singleton, skip
+        continue;
+      }
+
+      const singletonData = singletonMap.get(tagName);
+      if (singletonData && singletonData.lastIndex === i) {
+        // This is the last occurrence, include it
+        result.push(singletonData.tag);
+        processedSingletons.add(tagName);
+      }
+      // If not the last occurrence, skip it
+    } else {
+      // Multi-value tag: remove exact duplicates, preserve order
       const serialized = JSON.stringify(tag);
       if (multiValueSeen.has(serialized)) {
         if (logWarnings) {
@@ -181,27 +213,7 @@ export function normalizeTags(
       }
       multiValueSeen.add(serialized);
       result.push(tag);
-    } else {
-      // Unknown tag: Treat as singleton (conservative approach)
-      const existing = singletonMap.get(tagName);
-      if (existing && logWarnings) {
-        console.warn(
-          `[TagNormalize] Unknown tag "${tagName}" treated as singleton:`,
-          `Replacing [${existing.join(', ')}] with [${tag.join(', ')}]`
-        );
-      }
-      singletonMap.set(tagName, tag);
     }
-  }
-
-  // Add all singleton tags to result
-  // Sort by tag name for deterministic output
-  const sortedSingletons = Array.from(singletonMap.entries()).sort(([a], [b]) =>
-    a.localeCompare(b)
-  );
-
-  for (const [, tag] of sortedSingletons) {
-    result.push(tag);
   }
 
   return result;
