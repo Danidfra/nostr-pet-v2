@@ -43,13 +43,16 @@ export interface InteractionFlowParams {
  * Get the list of tags that should be removed for a specific action
  *
  * CRITICAL: This function determines which tags to update based on:
- * 1. Stats that actually changed (keys in multipliedDeltas)
+ * 1. Stats that actually changed (keys in multipliedDeltas with non-zero deltas)
  * 2. Timestamps/state fields that are explicitly modified by the action
  *
  * This ensures unchanged tags are preserved in the new event.
  *
+ * IMPORTANT: multipliedDeltas must contain ONLY non-zero deltas. Zero deltas
+ * must be filtered out before calling this function to avoid removing unchanged tags.
+ *
  * @param action - The interaction action being performed
- * @param multipliedDeltas - Object containing only the stats that changed
+ * @param multipliedDeltas - Object containing ONLY stats with non-zero deltas
  * @returns Array of tag names to remove (will be replaced with new values)
  */
 function getTagsToUpdateForAction(
@@ -59,6 +62,7 @@ function getTagsToUpdateForAction(
   const tagsToRemove: string[] = [];
 
   // 1. Add stat tags that actually changed (convert camelCase to snake_case)
+  // CRITICAL: This only includes stats with non-zero deltas from multipliedDeltas
   Object.keys(multipliedDeltas).forEach(statKey => {
     const tagName = statToTag(statKey);
     tagsToRemove.push(tagName);
@@ -221,10 +225,14 @@ export async function executeInteractionFlow(
       itemId
     );
 
-    // Multiply deltas by item quantity
+    // Multiply deltas by item quantity, keeping ONLY non-zero deltas
     const multipliedDeltas: Record<string, number> = {};
     Object.entries(deltas).forEach(([key, delta]) => {
-      multipliedDeltas[key] = delta * itemQuantity;
+      const finalDelta = delta * itemQuantity;
+      // CRITICAL: Only include non-zero deltas to avoid updating unchanged stats
+      if (finalDelta !== 0) {
+        multipliedDeltas[key] = finalDelta;
+      }
     });
 
     // Convert to BlobbiStatChange array for v2 (using snake_case)
@@ -290,12 +298,23 @@ export async function executeInteractionFlow(
     // ============================================================
 
     // Apply deltas with clamping to get new stat values
+    // CRITICAL: Only compute newStats for stats that actually changed (non-zero deltas)
     const newStats: Partial<BlobbiStatus> = {};
 
     Object.entries(multipliedDeltas).forEach(([key, delta]) => {
       const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
-      const currentNum = typeof currentValue === 'number' ? currentValue : 0;
-      const newValue = clampStat(currentNum + delta);
+
+      // Validate that the current value exists and is a number
+      if (typeof currentValue !== 'number') {
+        console.warn(
+          `[executeInteractionFlow] STEP 3: Stat "${key}" is missing or not a number in current Blobbi state. Skipping update.`,
+          { currentValue, delta }
+        );
+        return; // Skip this stat instead of defaulting to 0
+      }
+
+      // Apply delta and clamp to valid range
+      const newValue = clampStat(currentValue + delta);
       (newStats as unknown as Record<string, number>)[key] = newValue;
     });
 

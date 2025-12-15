@@ -388,4 +388,217 @@ describe('executeInteractionFlow - Tag Preservation (Option A)', () => {
     // Action-specific timestamp should be added
     expect(getTag('last_warm')).toBeDefined(); // ✅ Added for warm action
   });
+
+  it('should not remove tags when deltas are zero', async () => {
+    const blobbi = {
+      id: 'test-blobbi',
+      name: 'Test Blobbi',
+      stage: 'baby' as const,
+      generation: 1,
+      species: 'blobbi',
+      baseColor: 'red',
+      pattern: 'striped',
+      eyeColor: 'green',
+      size: 'medium',
+
+      // Required fields
+      author: 'test-author',
+      createdAt: 4000,
+      kind: 31124,
+      ownerPubkey: 'test-pubkey',
+      breedingReady: false,
+
+      // All stats present
+      hunger: 50,
+      happiness: 75,
+      health: 90,
+      hygiene: 60,
+      energy: 80,
+
+      experience: 150,
+      careStreak: 8,
+      lastInteraction: 4000,
+
+      isSleeping: false,
+      state: 'active',
+
+      event: {
+        id: 'original-event',
+        kind: 31124,
+        pubkey: 'test-pubkey',
+        created_at: 4000,
+        tags: [
+          ['d', 'test-blobbi'],
+          ['name', 'Test Blobbi'],
+          ['stage', 'baby'],
+          ['hunger', '50'],
+          ['happiness', '75'],
+          ['health', '90'],
+          ['hygiene', '60'],
+          ['energy', '80'],
+          ['experience', '150'],
+          ['care_streak', '8'],
+          ['last_interaction', '4000'],
+          ['is_sleeping', 'false'],
+          ['state', 'active'],
+        ],
+        content: '',
+        sig: 'original-sig',
+      },
+    } as unknown as BlobbiStatus;
+
+    const mockNostr = { event: vi.fn(async () => {}) };
+    const mockSigner = {
+      signEvent: vi.fn(async (event: Omit<NostrEvent, 'id' | 'sig'>) => ({
+        ...event,
+        id: 'test-id',
+        sig: 'test-sig',
+      })),
+    };
+
+    // Mock interaction that returns some zero deltas and some non-zero
+    vi.mocked(await import('@/lib/blobbi-interaction-logic')).applyBlobbiInteraction
+      .mockReturnValue({
+        hunger: 0,      // Zero delta - should NOT be updated
+        happiness: 0,   // Zero delta - should NOT be updated
+        health: 5,      // Non-zero delta - SHOULD be updated
+        hygiene: 0,     // Zero delta - should NOT be updated
+        energy: 0,      // Zero delta - should NOT be updated
+      });
+
+    const result = await executeInteractionFlow(
+      mockNostr,
+      mockSigner as never,
+      {
+        blobbi,
+        action: 'medicine',
+      },
+      'test-pubkey'
+    );
+
+    expect(result.success).toBe(true);
+
+    const statusTags = result.statusEvent!.tags;
+    const getTag = (name: string) => statusTags.find(t => t[0] === name)?.[1];
+
+    // Stats with zero deltas should be PRESERVED (not removed/rewritten)
+    expect(getTag('hunger')).toBe('50'); // ✅ Preserved (zero delta)
+    expect(getTag('happiness')).toBe('75'); // ✅ Preserved (zero delta)
+    expect(getTag('hygiene')).toBe('60'); // ✅ Preserved (zero delta)
+    expect(getTag('energy')).toBe('80'); // ✅ Preserved (zero delta)
+
+    // Stat with non-zero delta should be UPDATED
+    expect(getTag('health')).toBe('95'); // ✅ Updated (90 + 5)
+
+    // Universal tags should be updated
+    expect(getTag('experience')).toBeDefined(); // ✅ Updated
+    expect(getTag('care_streak')).toBeDefined(); // ✅ Updated
+    expect(getTag('last_interaction')).toBeDefined(); // ✅ Updated
+
+    // Action-specific timestamp should be added
+    expect(getTag('last_medicine')).toBeDefined(); // ✅ Added for medicine action
+
+    // Metadata should be preserved
+    expect(getTag('name')).toBe('Test Blobbi'); // ✅ Preserved
+    expect(getTag('stage')).toBe('baby'); // ✅ Preserved
+  });
+
+  it('should handle missing stat gracefully (skip update instead of defaulting to 0)', async () => {
+    const blobbi = {
+      id: 'test-blobbi',
+      name: 'Test Blobbi',
+      stage: 'baby' as const,
+      generation: 1,
+      species: 'blobbi',
+      baseColor: 'yellow',
+      pattern: 'spotted',
+      eyeColor: 'brown',
+      size: 'small',
+
+      // Required fields
+      author: 'test-author',
+      createdAt: 5000,
+      kind: 31124,
+      ownerPubkey: 'test-pubkey',
+      breedingReady: false,
+
+      // Only some stats present (hygiene is missing)
+      hunger: 40,
+      happiness: 80,
+      health: 85,
+      // hygiene: undefined, // Missing stat
+      energy: 70,
+
+      experience: 200,
+      careStreak: 12,
+      lastInteraction: 5000,
+
+      isSleeping: false,
+      state: 'active',
+
+      event: {
+        id: 'original-event',
+        kind: 31124,
+        pubkey: 'test-pubkey',
+        created_at: 5000,
+        tags: [
+          ['d', 'test-blobbi'],
+          ['name', 'Test Blobbi'],
+          ['stage', 'baby'],
+          ['hunger', '40'],
+          ['happiness', '80'],
+          ['health', '85'],
+          // No hygiene tag
+          ['energy', '70'],
+          ['experience', '200'],
+          ['care_streak', '12'],
+          ['last_interaction', '5000'],
+        ],
+        content: '',
+        sig: 'original-sig',
+      },
+    } as unknown as BlobbiStatus;
+
+    const mockNostr = { event: vi.fn(async () => {}) };
+    const mockSigner = {
+      signEvent: vi.fn(async (event: Omit<NostrEvent, 'id' | 'sig'>) => ({
+        ...event,
+        id: 'test-id',
+        sig: 'test-sig',
+      })),
+    };
+
+    // Mock interaction that tries to change hygiene (which is missing)
+    vi.mocked(await import('@/lib/blobbi-interaction-logic')).applyBlobbiInteraction
+      .mockReturnValue({
+        hygiene: 10, // Delta for missing stat - should be skipped with warning
+        energy: 5,   // Delta for existing stat - should work
+      });
+
+    const result = await executeInteractionFlow(
+      mockNostr,
+      mockSigner as never,
+      {
+        blobbi,
+        action: 'clean',
+      },
+      'test-pubkey'
+    );
+
+    expect(result.success).toBe(true);
+
+    const statusTags = result.statusEvent!.tags;
+    const getTag = (name: string) => statusTags.find(t => t[0] === name)?.[1];
+
+    // Missing stat should NOT be added (skipped with warning)
+    expect(getTag('hygiene')).toBeUndefined(); // ✅ Not added (was missing)
+
+    // Existing stat with delta should be updated
+    expect(getTag('energy')).toBe('75'); // ✅ Updated (70 + 5)
+
+    // Other stats should be preserved
+    expect(getTag('hunger')).toBe('40'); // ✅ Preserved
+    expect(getTag('happiness')).toBe('80'); // ✅ Preserved
+    expect(getTag('health')).toBe('85'); // ✅ Preserved
+  });
 });
