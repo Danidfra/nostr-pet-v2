@@ -57,16 +57,14 @@ export interface InteractionFlowParams {
  */
 function getTagsToUpdateForAction(
   action: BlobbiAction,
-  multipliedDeltas: Record<string, number>
+  changedStatKeys: string[]
 ): string[] {
   const tagsToRemove: string[] = [];
 
-  // 1. Add stat tags that actually changed (convert camelCase to snake_case)
-  // CRITICAL: This only includes stats with non-zero deltas from multipliedDeltas
-  Object.keys(multipliedDeltas).forEach(statKey => {
-    const tagName = statToTag(statKey);
-    tagsToRemove.push(tagName);
-  });
+  // 1. Remove ONLY stat tags that truly changed (after clamping + validation)
+  for (const statKey of changedStatKeys) {
+    tagsToRemove.push(statToTag(statKey));
+  }
 
   // 2. Add universal tags that always update on any interaction
   tagsToRemove.push('experience'); // Always updated with rewards
@@ -300,23 +298,31 @@ export async function executeInteractionFlow(
     // Apply deltas with clamping to get new stat values
     // CRITICAL: Only compute newStats for stats that actually changed (non-zero deltas)
     const newStats: Partial<BlobbiStatus> = {};
+    const changedStatKeys: string[] = [];
 
-    Object.entries(multipliedDeltas).forEach(([key, delta]) => {
-      const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
+    const blobbiRecord = blobbi as unknown as Record<string, unknown>;
+    const newStatsRecord = newStats as unknown as Record<string, unknown>;
 
-      // Validate that the current value exists and is a number
+    for (const [key, delta] of Object.entries(multipliedDeltas)) {
+      const currentValue = blobbiRecord[key];
+
+      // If missing/not numeric, do NOT update and do NOT remove tags for it
       if (typeof currentValue !== 'number') {
         console.warn(
-          `[executeInteractionFlow] STEP 3: Stat "${key}" is missing or not a number in current Blobbi state. Skipping update.`,
+          `[executeInteractionFlow] STEP 3: Stat "${key}" is missing or not a number. Skipping update.`,
           { currentValue, delta }
         );
-        return; // Skip this stat instead of defaulting to 0
+        continue;
       }
 
-      // Apply delta and clamp to valid range
-      const newValue = clampStat(currentValue + delta);
-      (newStats as unknown as Record<string, number>)[key] = newValue;
-    });
+      const nextValue = clampStat(currentValue + delta);
+
+      // CRITICAL: Only treat as changed if value actually differs after clamping
+      if (nextValue !== currentValue) {
+        newStatsRecord[key] = nextValue;
+        changedStatKeys.push(key);
+      }
+    }
 
     // Add rewards
     newStats.experience = (blobbi.experience || 0) + experienceGained;
@@ -353,24 +359,24 @@ export async function executeInteractionFlow(
 
     // OPTION A: Dynamically compute tags to remove based on what actually changed
     // This ensures unchanged tags are preserved
-    const tagsToRemove = getTagsToUpdateForAction(action, multipliedDeltas);
+    const tagsToRemove = getTagsToUpdateForAction(action, changedStatKeys);
 
     // Collect new tags to add (only for fields that actually changed)
     const tagsToAdd: string[][] = [];
 
-    // Add updated stat tags (using snake_case)
-    if (newStats.hunger !== undefined) tagsToAdd.push(['hunger', newStats.hunger.toString()]);
-    if (newStats.happiness !== undefined) tagsToAdd.push(['happiness', newStats.happiness.toString()]);
-    if (newStats.health !== undefined) tagsToAdd.push(['health', newStats.health.toString()]);
-    if (newStats.hygiene !== undefined) tagsToAdd.push(['hygiene', newStats.hygiene.toString()]);
-    if (newStats.energy !== undefined) tagsToAdd.push(['energy', newStats.energy.toString()]);
-    if (newStats.eggTemperature !== undefined) tagsToAdd.push(['egg_temperature', newStats.eggTemperature.toString()]);
-    if (newStats.shellIntegrity !== undefined) tagsToAdd.push(['shell_integrity', newStats.shellIntegrity.toString()]);
+    // Add updated stat tags (ONLY for truly changed stats)
+    for (const statKey of changedStatKeys) {
+      const v = (newStats as unknown as Record<string, unknown>)[statKey];
+      if (typeof v === 'number') {
+        tagsToAdd.push([statToTag(statKey), v.toString()]);
+      }
+    }
 
     // Add other updated tags
-    if (newStats.experience !== undefined) tagsToAdd.push(['experience', newStats.experience.toString()]);
-    if (newStats.careStreak !== undefined) tagsToAdd.push(['care_streak', newStats.careStreak.toString()]);
-    if (newStats.lastInteraction !== undefined) tagsToAdd.push(['last_interaction', newStats.lastInteraction.toString()]);
+    // These are always set above, so we can add them unconditionally
+    tagsToAdd.push(['experience', newStats.experience!.toString()]);
+    tagsToAdd.push(['care_streak', newStats.careStreak!.toString()]);
+    tagsToAdd.push(['last_interaction', newStats.lastInteraction!.toString()]);
     if (newStats.lastMeal !== undefined) tagsToAdd.push(['last_meal', newStats.lastMeal.toString()]);
     if (newStats.lastClean !== undefined) tagsToAdd.push(['last_clean', newStats.lastClean.toString()]);
     if (newStats.lastMedicine !== undefined) tagsToAdd.push(['last_medicine', newStats.lastMedicine.toString()]);
