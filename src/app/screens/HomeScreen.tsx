@@ -8,6 +8,7 @@ import { AdultGraphic } from '@/components/blobbi/AdultGraphic';
 import { StatusCircle } from '@/components/blobbi/StatusCircle';
 import { ItemCard } from '@/components/blobbi/ItemCard';
 import { ItemUseModal } from '@/components/blobbi/ItemUseModal';
+import { ItemBuyModal } from '@/components/blobbi/ItemBuyModal';
 import { useMyBlobbis } from '@/hooks/nostr-pet/useBlobbiStatus';
 import { mapBlobbiStatusListToBlobbis } from '@/lib/nostr-pet/status-31124';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -58,6 +59,7 @@ import BlobbiBackground from '@/assets/blobbi-background.png';
 import BlobbiLogo from '@/assets/blobbilogo.svg';
 import { useBlobbonautInventory } from '@/hooks/nostr-pet/useBlobbonautInventory';
 import { useBlobbiInteraction } from '@/hooks/nostr-pet/useBlobbiInteraction';
+import { useBlobbiShop } from '@/hooks/nostr-pet/useBlobbiShop';
 import { getItemDefinition, getAllItems, type BlobbiItemCategory, type BlobbiItemDefinition } from '@/lib/blobbi-items';
 import type { BlobbiAction } from '@/lib/blobbi-interaction-logic';
 
@@ -140,7 +142,7 @@ const ROOMS: Room[] = ['MY_BLOBBI', 'GROWTH_HUB', 'PLAYROOM'];
 
 export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   // Use the Kind 31124 hook to get real Blobbis
-  const { blobbis: blobbiStatusList, isLoading, isInitialLoading, error } = useMyBlobbis();
+  const { blobbis: blobbiStatusList, isInitialLoading, error } = useMyBlobbis();
 
   // Convert BlobbiStatus to legacy Blobbi type for compatibility
   const blobbis = useMemo(() => {
@@ -157,12 +159,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
   const [selectedItem, setSelectedItem] = useState<BlobbiItemDefinition | null>(null);
   const [isItemModalOpen, setIsItemModalOpen] = useState(false);
   const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isBuyModalOpen, setIsBuyModalOpen] = useState(false);
+  const [selectedShopItem, setSelectedShopItem] = useState<BlobbiItemDefinition | null>(null);
   const [selectedInventoryTab, setSelectedInventoryTab] = useState<BlobbiItemCategory | 'all'>('all');
   const [pendingAction, setPendingAction] = useState<BlobbiAction | null>(null);
   const { toast } = useToast();
 
   // Get inventory data
   const { availableItems, isLoading: inventoryLoading } = useBlobbonautInventory();
+
+  // Get shop data
+  const { purchaseItem, isPurchasing, getCurrentCoins, getCurrentItemQuantity } = useBlobbiShop();
 
   // Get all items for shop
   const allItems = useMemo(() => getAllItems(), []);
@@ -424,6 +431,40 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
       title: `${action}!`,
       description: `You ${action.toLowerCase()} ${currentBlobbi.name}.`,
     });
+  };
+
+  // Handle opening shop item buy modal
+  const handleShopItemClick = (itemId: string) => {
+    const itemDef = getItemDefinition(itemId);
+    if (itemDef) {
+      setSelectedShopItem(itemDef);
+      setIsBuyModalOpen(true);
+    }
+  };
+
+  // Handle purchasing item from buy modal
+  const handlePurchaseItem = async (itemId: string, quantity: number) => {
+    try {
+      const result = await purchaseItem(itemId, quantity);
+
+      if (result.success) {
+        const itemDef = getItemDefinition(itemId);
+        toast({
+          title: 'Purchase Successful!',
+          description: `Bought ${quantity}x ${itemDef?.displayName}! ${result.newCoins} coins remaining.`,
+        });
+
+        // Close the buy modal
+        setIsBuyModalOpen(false);
+      }
+    } catch (error) {
+      console.error('[HomeScreen.handlePurchaseItem] Purchase failed:', error);
+      toast({
+        title: 'Purchase Failed',
+        description: error instanceof Error ? error.message : 'Failed to purchase item',
+        variant: 'destructive',
+      });
+    }
   };
 
   // Helper functions for Growth Hub
@@ -1195,6 +1236,17 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
           isLoading={isInteracting}
         />
 
+        {/* ITEM BUY MODAL */}
+        <ItemBuyModal
+          open={isBuyModalOpen}
+          onOpenChange={setIsBuyModalOpen}
+          item={selectedShopItem}
+          currentQuantity={selectedShopItem ? getCurrentItemQuantity(selectedShopItem.id) : 0}
+          currentCoins={getCurrentCoins()}
+          onBuyItem={handlePurchaseItem}
+          isLoading={isPurchasing}
+        />
+
         {/* SHOP MODAL */}
         <Dialog open={isShopOpen} onOpenChange={setIsShopOpen}>
           <DialogContent className="w-[94vw] max-w-2xl max-h-[80vh] flex flex-col p-0 rounded-2xl gap-0">
@@ -1239,12 +1291,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                       return (
                         <Button
                           key={item.id}
-                          onClick={() => {
-                            toast({
-                              title: 'Shop',
-                              description: `Buying ${item.displayName} is not implemented yet.`,
-                            });
-                          }}
+                          onClick={() => handleShopItemClick(item.id)}
                           variant="outline"
                           className="h-20 flex flex-col gap-1 relative"
                         >
@@ -1286,12 +1333,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
                             return (
                               <Button
                                 key={item.id}
-                                onClick={() => {
-                                  toast({
-                                    title: 'Shop',
-                                    description: `Buying ${item.displayName} is not implemented yet.`,
-                                  });
-                                }}
+                                onClick={() => handleShopItemClick(item.id)}
                                 variant="outline"
                                 className="h-20 flex flex-col gap-1 relative"
                               >
