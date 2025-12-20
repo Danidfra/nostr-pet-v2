@@ -287,11 +287,9 @@ describe('validateInteractionV2Event', () => {
       experienceGained: 5,
       carePoints: 1,
     };
-    const event = buildInteractionV2Event(feedParamsNoStats, 'test-pubkey');
-    const result = validateInteractionV2Event(event);
 
-    expect(result.valid).toBe(false);
-    expect(result.errors).toContain(
+    // Build will throw during validation since feed requires stat changes
+    expect(() => buildInteractionV2Event(feedParamsNoStats, 'test-pubkey')).toThrow(
       'Missing required tag: at least one ["stat_change", "<stat>:<delta>"]'
     );
   });
