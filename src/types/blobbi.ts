@@ -55,7 +55,6 @@ export interface Blobbi {
   eggStatus?: string;
   shellIntegrity?: number;
   // Behavior
-  isSleeping?: boolean;
   isDirty?: boolean;
   hasBuff?: string;
   hasDebuff?: string;
@@ -66,7 +65,15 @@ export interface Blobbi {
   lastCheck?: number;
   lastSing?: number;
   lastMedicine?: number;
+
+  // DEPRECATED: These fields are no longer used in v2+
+  // They are kept in the type for backward compatibility with old events
+  // New events should ONLY use 'state' field for sleep tracking
+  /** @deprecated Use 'state' instead. Will be removed in future versions. */
+  isSleeping?: boolean;
+  /** @deprecated Use event created_at for timing. Will be removed in future versions. */
   sleepStartedAt?: number;
+  /** @deprecated Use event created_at for timing. Will be removed in future versions. */
   lastSleepUpdate?: number;
   // Social
   adoptedBy?: string;

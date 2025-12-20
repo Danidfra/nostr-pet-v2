@@ -1,13 +1,13 @@
 /**
  * OPTIMIZED AdultGraphic Component
- * 
+ *
  * This is the performance-optimized version of AdultGraphic.tsx
- * 
+ *
  * Key optimizations:
  * 1. Animation only triggers on hover (not continuous)
  * 2. Memoized to prevent unnecessary re-renders
  * 3. Custom comparison function for React.memo
- * 
+ *
  * Performance improvement: ~90% reduction in CPU usage
  */
 
@@ -142,7 +142,8 @@ export const AdultGraphic = memo<AdultGraphicProps>(({
   const evolutionForm = blobbi.evolutionForm || 'blobbi';
 
   // Determine which SVG to use based on blobbi state
-  const isSleeping = blobbi.isSleeping || blobbi.state === 'sleeping';
+  // Simplified sleep state model - only check 'state' tag
+  const isSleeping = blobbi.state === 'sleeping';
   const svgPath = isSleeping
     ? adultSvgs[evolutionForm].sleeping
     : adultSvgs[evolutionForm].base;
@@ -167,10 +168,10 @@ export const AdultGraphic = memo<AdultGraphicProps>(({
   );
 }, (prevProps, nextProps) => {
   // ✅ OPTIMIZATION: Custom comparison to prevent unnecessary re-renders
+  // Simplified sleep state model - only check 'state' tag
   return (
     prevProps.blobbi.id === nextProps.blobbi.id &&
     prevProps.blobbi.evolutionForm === nextProps.blobbi.evolutionForm &&
-    prevProps.blobbi.isSleeping === nextProps.blobbi.isSleeping &&
     prevProps.blobbi.state === nextProps.blobbi.state &&
     prevProps.animated === nextProps.animated
   );

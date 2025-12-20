@@ -158,10 +158,11 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     }
 
     // Validation: Check if Blobbi is sleeping (can only wake)
-    if (blobbi.isSleeping && action !== 'wake') {
+    // Simplified sleep state model - only check 'state' tag
+    if (blobbi.state === 'sleeping' && action !== 'wake') {
       console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Blobbi is sleeping', {
         action,
-        isSleeping: blobbi.isSleeping,
+        state: blobbi.state,
       });
       return {
         success: false,
@@ -211,15 +212,17 @@ export const useBlobbiInteraction = (blobbiId: string) => {
       if (action === 'warm') newStats.lastWarm = now;
       if (action === 'sing') newStats.lastSing = now;
 
-      // Handle sleep state changes
+      // Handle sleep state changes (simplified model - only use 'state' tag)
       if (action === 'sleep') {
-        newStats.isSleeping = true;
         newStats.state = 'sleeping';
-        newStats.sleepStartedAt = now;
-        newStats.lastSleepUpdate = now;
+        // Explicitly set deprecated fields to undefined
+        newStats.isSleeping = undefined;
+        newStats.sleepStartedAt = undefined;
+        newStats.lastSleepUpdate = undefined;
       } else if (action === 'wake') {
-        newStats.isSleeping = false;
         newStats.state = 'active';
+        // Explicitly set deprecated fields to undefined
+        newStats.isSleeping = undefined;
         newStats.sleepStartedAt = undefined;
         newStats.lastSleepUpdate = undefined;
       }

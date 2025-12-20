@@ -18,7 +18,8 @@ export const BabyGraphic: React.FC<BabyGraphicProps> = ({
 }) => {
   // Determine which SVG to use based on blobbi state
   const getSvgSrc = () => {
-    if (blobbi.isSleeping || blobbi.state === 'sleeping') {
+    // Simplified sleep state model - only check 'state' tag
+    if (blobbi.state === 'sleeping') {
       return blobbiSleepingSvg;
     }
 

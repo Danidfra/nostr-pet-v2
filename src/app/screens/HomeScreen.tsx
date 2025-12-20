@@ -600,12 +600,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'sleep')}
+              onClick={() => handleInteraction(currentBlobbi.state === 'sleeping' ? 'wake' : 'sleep')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
               <Bed className="h-5 w-5" />
-              <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
+              <span className="text-xs">{currentBlobbi.state === 'sleeping' ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
               onClick={() => openInventory('medicine', 'medicine')}
@@ -640,12 +640,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ onLogout }) => {
               <span className="text-xs">Clean</span>
             </Button>
             <Button
-              onClick={() => handleInteraction(currentBlobbi.isSleeping ? 'wake' : 'sleep')}
+              onClick={() => handleInteraction(currentBlobbi.state === 'sleeping' ? 'wake' : 'sleep')}
               disabled={isInteracting}
               className="h-16 flex flex-col gap-1 bg-gradient-to-br from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600"
             >
               <Bed className="h-5 w-5" />
-              <span className="text-xs">{currentBlobbi.isSleeping ? 'Wake' : 'Sleep'}</span>
+              <span className="text-xs">{currentBlobbi.state === 'sleeping' ? 'Wake' : 'Sleep'}</span>
             </Button>
             <Button
               onClick={() => openInventory('medicine', 'medicine')}

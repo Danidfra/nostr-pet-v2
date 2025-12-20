@@ -89,16 +89,18 @@ function getTagsToUpdateForAction(
       tagsToRemove.push('last_sing');
       break;
     case 'sleep':
-      // Sleep action sets sleeping state
-      tagsToRemove.push('is_sleeping');
+      // Sleep action sets sleeping state (simplified model - only use 'state' tag)
       tagsToRemove.push('state');
+      // Remove deprecated tags if they exist
+      tagsToRemove.push('is_sleeping');
       tagsToRemove.push('sleep_started_at');
       tagsToRemove.push('last_sleep_update');
       break;
     case 'wake':
-      // Wake action clears sleeping state
-      tagsToRemove.push('is_sleeping');
+      // Wake action clears sleeping state (simplified model - only use 'state' tag)
       tagsToRemove.push('state');
+      // Remove deprecated tags if they exist
+      tagsToRemove.push('is_sleeping');
       tagsToRemove.push('sleep_started_at');
       tagsToRemove.push('last_sleep_update');
       break;
@@ -337,15 +339,17 @@ export async function executeInteractionFlow(
     if (action === 'warm') newStats.lastWarm = now;
     if (action === 'sing') newStats.lastSing = now;
 
-    // Handle sleep state changes
+    // Handle sleep state changes (simplified model - only use 'state' tag)
     if (action === 'sleep') {
-      newStats.isSleeping = true;
       newStats.state = 'sleeping';
-      newStats.sleepStartedAt = now;
-      newStats.lastSleepUpdate = now;
+      // Explicitly set deprecated fields to undefined to ensure they're removed
+      newStats.isSleeping = undefined;
+      newStats.sleepStartedAt = undefined;
+      newStats.lastSleepUpdate = undefined;
     } else if (action === 'wake') {
-      newStats.isSleeping = false;
       newStats.state = 'active';
+      // Explicitly set deprecated fields to undefined to ensure they're removed
+      newStats.isSleeping = undefined;
       newStats.sleepStartedAt = undefined;
       newStats.lastSleepUpdate = undefined;
     }
@@ -382,10 +386,10 @@ export async function executeInteractionFlow(
     if (newStats.lastMedicine !== undefined) tagsToAdd.push(['last_medicine', newStats.lastMedicine.toString()]);
     if (newStats.lastWarm !== undefined) tagsToAdd.push(['last_warm', newStats.lastWarm.toString()]);
     if (newStats.lastSing !== undefined) tagsToAdd.push(['last_sing', newStats.lastSing.toString()]);
-    if (newStats.isSleeping !== undefined) tagsToAdd.push(['is_sleeping', newStats.isSleeping.toString()]);
+
+    // Simplified sleep state model - only use 'state' tag
+    // Do NOT add deprecated tags (is_sleeping, sleep_started_at, last_sleep_update)
     if (newStats.state !== undefined) tagsToAdd.push(['state', newStats.state]);
-    if (newStats.sleepStartedAt !== undefined) tagsToAdd.push(['sleep_started_at', newStats.sleepStartedAt.toString()]);
-    if (newStats.lastSleepUpdate !== undefined) tagsToAdd.push(['last_sleep_update', newStats.lastSleepUpdate.toString()]);
 
     // CRITICAL: Use updateAndNormalizeTags to preserve unchanged tags
     // Only tags in tagsToRemove are removed; all others are preserved

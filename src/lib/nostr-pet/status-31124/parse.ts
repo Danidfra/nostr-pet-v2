@@ -250,10 +250,13 @@ export const parseBlobbiStatusFromEvent = (event: NostrEvent): BlobbiStatus | nu
     const shellIntegrity = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.SHELL_INTEGRITY);
 
     // Parse behavior tags
+    // NOTE: Simplified sleep state model (v2+) uses ONLY 'state' tag
+    // Old tags (is_sleeping, sleep_started_at, last_sleep_update) are read for backward compatibility
+    // but should not be written in new events
     const isSleeping = parseBooleanTag(
       event.tags as NostrTag[],
       BLOBBI_STATUS_TAG_NAMES.IS_SLEEPING,
-      BLOBBI_STATUS_DEFAULTS.isSleeping
+      false // Don't use default from BLOBBI_STATUS_DEFAULTS (deprecated field)
     );
     const stateStr = getTagValue(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.STATE);
     const state = (stateStr || BLOBBI_STATUS_DEFAULTS.state) as BlobbiState;

@@ -24,14 +24,14 @@ export type BlobbiState = 'active' | 'sleeping' | 'hibernating';
 /**
  * Adult evolution forms
  */
-export type AdultType = 
-  | 'blobbi' | 'pandi' | 'owli' | 'catti' | 'froggi' | 'cloudi' 
-  | 'crysti' | 'bloomi' | 'starri' | 'flammi' | 'droppi' | 'breezy' 
+export type AdultType =
+  | 'blobbi' | 'pandi' | 'owli' | 'catti' | 'froggi' | 'cloudi'
+  | 'crysti' | 'bloomi' | 'starri' | 'flammi' | 'droppi' | 'breezy'
   | 'rocky' | 'cacti' | 'mushie' | 'leafy' | 'rosey';
 
 /**
  * Blobbi Current State (Kind 31124)
- * 
+ *
  * Represents the real-time status of a single Blobbi pet.
  * This is an addressable event, meaning only the latest event per (pubkey, kind, d) is stored.
  */
@@ -89,10 +89,18 @@ export interface BlobbiStatus {
   shellIntegrity?: number;
 
   // Behavior
-  isSleeping: boolean;
-  state: BlobbiState;
+  state: BlobbiState; // Single source of truth for sleep state ('active' | 'sleeping' | 'hibernating')
+
+  // DEPRECATED: These fields are no longer used in v2+
+  // They are kept in the type for backward compatibility with old events
+  // New events should ONLY use 'state' tag for sleep tracking
+  /** @deprecated Use 'state' instead. Will be removed in future versions. */
+  isSleeping?: boolean;
+  /** @deprecated Use event created_at for timing. Will be removed in future versions. */
   sleepStartedAt?: number;
+  /** @deprecated Use event created_at for timing. Will be removed in future versions. */
   lastSleepUpdate?: number;
+
   isDirty?: boolean;
   hasBuff?: string;
   hasDebuff?: string;
@@ -245,8 +253,8 @@ export const BLOBBI_STATUS_DEFAULTS = {
   energy: 80,
   experience: 0,
   careStreak: 0,
-  isSleeping: false,
-  state: 'active' as BlobbiState,
+  state: 'active' as BlobbiState, // Single source of truth for sleep state
+  // DEPRECATED: isSleeping, sleepStartedAt, lastSleepUpdate are no longer used
 } as const;
 
 /**
@@ -286,8 +294,12 @@ export interface BlobbiStatusUpdate {
   // State
   stage?: BlobbiLifeStage;
   breedingReady?: boolean;
-  isSleeping?: boolean;
+  state?: BlobbiState; // Simplified sleep state model (v2+)
   mood?: BlobbiMood;
+
+  // DEPRECATED: Use 'state' instead
+  /** @deprecated Use 'state' instead */
+  isSleeping?: boolean;
 
   // Appearance
   baseColor?: string;

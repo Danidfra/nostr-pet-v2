@@ -102,11 +102,15 @@ export function validateInteractionV2Event(
   }
 
   // Stat change tags: at least one ["stat_change", "<stat>:<delta>"]
+  // EXCEPTION: State-only actions (sleep, wake) don't require stat changes
+  const stateOnlyActions = ['sleep', 'wake'];
+  const isStateOnlyAction = actionTag && stateOnlyActions.includes(actionTag[1]);
+
   const statChangeTags = findTags(INTERACTION_V2_TAG_NAMES.STAT_CHANGE);
-  if (statChangeTags.length === 0) {
+  if (statChangeTags.length === 0 && !isStateOnlyAction) {
     errors.push(`Missing required tag: at least one ["${INTERACTION_V2_TAG_NAMES.STAT_CHANGE}", "<stat>:<delta>"]`);
   } else {
-    // Validate stat_change format
+    // Validate stat_change format (if any are present)
     for (const [, value] of statChangeTags) {
       if (!value || !value.includes(':')) {
         errors.push(`Invalid stat_change format: expected "<stat>:<delta>", got "${value}"`);

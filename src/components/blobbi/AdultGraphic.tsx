@@ -126,7 +126,8 @@ export const AdultGraphic: React.FC<AdultGraphicProps> = ({
   const evolutionForm = blobbi.evolutionForm || 'blobbi';
 
   // Determine which SVG to use based on blobbi state
-  const isSleeping = blobbi.isSleeping || blobbi.state === 'sleeping';
+  // Simplified sleep state model - only check 'state' tag
+  const isSleeping = blobbi.state === 'sleeping';
   const svgPath = isSleeping
     ? adultSvgs[evolutionForm].sleeping
     : adultSvgs[evolutionForm].base;

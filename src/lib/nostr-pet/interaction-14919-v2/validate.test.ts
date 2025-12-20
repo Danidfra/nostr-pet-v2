@@ -245,6 +245,56 @@ describe('validateInteractionV2Event', () => {
     expect(result.valid).toBe(true);
     expect(result.errors).toHaveLength(0);
   });
+
+  it('should allow zero stat changes for sleep action (state-only action)', () => {
+    const sleepParams: CreateInteractionV2Params = {
+      blobbiId: 'test-blobbi-123',
+      action: 'sleep',
+      actionCategory: 'recovery',
+      statChanges: [], // No stat changes - sleep is state-only
+      experienceGained: 0,
+      carePoints: 0,
+    };
+    const event = buildInteractionV2Event(sleepParams, 'test-pubkey');
+    const result = validateInteractionV2Event(event);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should allow zero stat changes for wake action (state-only action)', () => {
+    const wakeParams: CreateInteractionV2Params = {
+      blobbiId: 'test-blobbi-123',
+      action: 'wake',
+      actionCategory: 'recovery',
+      statChanges: [], // Wake may have stat changes based on energy, but can be empty
+      experienceGained: 2,
+      carePoints: 1,
+    };
+    const event = buildInteractionV2Event(wakeParams, 'test-pubkey');
+    const result = validateInteractionV2Event(event);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should require stat changes for non-state-only actions', () => {
+    const feedParamsNoStats: CreateInteractionV2Params = {
+      blobbiId: 'test-blobbi-123',
+      action: 'feed',
+      actionCategory: 'nutrition',
+      statChanges: [], // Feed requires stat changes
+      experienceGained: 5,
+      carePoints: 1,
+    };
+    const event = buildInteractionV2Event(feedParamsNoStats, 'test-pubkey');
+    const result = validateInteractionV2Event(event);
+
+    expect(result.valid).toBe(false);
+    expect(result.errors).toContain(
+      'Missing required tag: at least one ["stat_change", "<stat>:<delta>"]'
+    );
+  });
 });
 
 describe('assertValidInteractionV2Event', () => {
