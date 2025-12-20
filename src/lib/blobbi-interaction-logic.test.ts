@@ -228,23 +228,22 @@ describe('applyBlobbiInteraction', () => {
     });
   });
 
-  describe('Wake Action (Energy-Dependent)', () => {
-    it('should give positive happiness when waking with high energy (>= 50)', () => {
+  describe('Wake Action (Energy Recovery)', () => {
+    it('should return empty deltas (energy recovery handled in interaction flow)', () => {
       const blobbi = createMockBlobbi('baby', { energy: 60 });
       const deltas = applyBlobbiInteraction(blobbi, 'baby', 'wake');
 
-      expect(deltas).toEqual({
-        happiness: 5,
-      });
+      // Wake action returns empty deltas - energy recovery is calculated
+      // separately in the interaction flow based on sleep duration
+      expect(deltas).toEqual({});
     });
 
-    it('should give negative happiness when waking with low energy (< 50)', () => {
+    it('should return empty deltas regardless of current energy level', () => {
       const blobbi = createMockBlobbi('baby', { energy: 30 });
       const deltas = applyBlobbiInteraction(blobbi, 'baby', 'wake');
 
-      expect(deltas).toEqual({
-        happiness: -5,
-      });
+      // Energy recovery is not based on current energy, but on sleep duration
+      expect(deltas).toEqual({});
     });
   });
 });

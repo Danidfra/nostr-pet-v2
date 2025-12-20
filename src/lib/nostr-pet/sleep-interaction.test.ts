@@ -29,33 +29,33 @@ describe('Sleep Interaction Flow', () => {
 
       expect(validation.valid).toBe(true);
       expect(validation.errors).toHaveLength(0);
-      
+
       // Verify event structure
       expect(event.kind).toBe(14919);
       expect(event.tags.find(([name]) => name === 'action')?.[1]).toBe('sleep');
       expect(event.tags.find(([name]) => name === 'action_category')?.[1]).toBe('recovery');
-      
+
       // Should have NO stat_change tags
       const statChangeTags = event.tags.filter(([name]) => name === 'stat_change');
       expect(statChangeTags).toHaveLength(0);
-      
+
       // Should have required ecosystem tags
       expect(event.tags.find(([name]) => name === 't')?.[1]).toBe('blobbi');
       expect(event.tags.find(([name]) => name === 'b')?.[1]).toBe('blobbi:ecosystem:v2');
       expect(event.tags.find(([name]) => name === 'client')?.[1]).toBe('blobbi');
-      
+
       // Should have NIP-31 alt tag
       const altTag = event.tags.find(([name]) => name === 'alt');
       expect(altTag).toBeDefined();
       expect(altTag?.[1]).toContain('sleep');
     });
 
-    it('should create valid wake event with zero stat changes', () => {
+    it('should create valid wake event with energy recovery stat change', () => {
       const wakeParams: CreateInteractionV2Params = {
         blobbiId: 'blobbi-test',
         action: 'wake',
         actionCategory: 'recovery',
-        statChanges: [], // May have stat changes based on energy, but can be empty
+        statChanges: [{ stat: 'energy', delta: 20 }], // Energy recovery from sleep
         experienceGained: 2,
         carePoints: 1,
       };
@@ -65,24 +65,29 @@ describe('Sleep Interaction Flow', () => {
 
       expect(validation.valid).toBe(true);
       expect(validation.errors).toHaveLength(0);
-      
+
       // Verify event structure
       expect(event.kind).toBe(14919);
       expect(event.tags.find(([name]) => name === 'action')?.[1]).toBe('wake');
       expect(event.tags.find(([name]) => name === 'action_category')?.[1]).toBe('recovery');
-      
+
+      // Should have energy stat change
+      const statChangeTags = event.tags.filter(([name]) => name === 'stat_change');
+      expect(statChangeTags).toHaveLength(1);
+      expect(statChangeTags[0][1]).toBe('energy:20');
+
       // Should have experience and care points
       expect(event.tags.find(([name]) => name === 'experience_gained')?.[1]).toBe('2');
       expect(event.tags.find(([name]) => name === 'care_points')?.[1]).toBe('1');
     });
 
-    it('should create wake event with happiness stat change when energy is high', () => {
+    it('should create wake event with minimal energy recovery', () => {
       const wakeParams: CreateInteractionV2Params = {
         blobbiId: 'blobbi-test',
         action: 'wake',
         actionCategory: 'recovery',
         statChanges: [
-          { stat: 'happiness', delta: 5 }, // Energy >= 50
+          { stat: 'energy', delta: 10 }, // Minimal recovery (12 minutes sleep)
         ],
         experienceGained: 2,
         carePoints: 1,
@@ -93,20 +98,20 @@ describe('Sleep Interaction Flow', () => {
 
       expect(validation.valid).toBe(true);
       expect(validation.errors).toHaveLength(0);
-      
+
       // Should have stat_change tag
       const statChangeTags = event.tags.filter(([name]) => name === 'stat_change');
       expect(statChangeTags).toHaveLength(1);
-      expect(statChangeTags[0][1]).toBe('happiness:5');
+      expect(statChangeTags[0][1]).toBe('energy:10');
     });
 
-    it('should create wake event with negative happiness when energy is low', () => {
+    it('should create wake event with high energy recovery after long sleep', () => {
       const wakeParams: CreateInteractionV2Params = {
         blobbiId: 'blobbi-test',
         action: 'wake',
         actionCategory: 'recovery',
         statChanges: [
-          { stat: 'happiness', delta: -5 }, // Energy < 50
+          { stat: 'energy', delta: 50 }, // 60 minutes sleep = 5 blocks = 50 energy
         ],
         experienceGained: 2,
         carePoints: 1,
@@ -117,11 +122,11 @@ describe('Sleep Interaction Flow', () => {
 
       expect(validation.valid).toBe(true);
       expect(validation.errors).toHaveLength(0);
-      
+
       // Should have stat_change tag
       const statChangeTags = event.tags.filter(([name]) => name === 'stat_change');
       expect(statChangeTags).toHaveLength(1);
-      expect(statChangeTags[0][1]).toBe('happiness:-5');
+      expect(statChangeTags[0][1]).toBe('energy:50');
     });
   });
 
@@ -137,11 +142,11 @@ describe('Sleep Interaction Flow', () => {
       };
 
       const event = buildInteractionV2Event(sleepParams, 'test-pubkey');
-      
+
       // Event itself doesn't contain state tag (that's in 31124)
       // This test verifies the 14919 event structure is correct
       expect(event.tags.find(([name]) => name === 'action')?.[1]).toBe('sleep');
-      
+
       // Should NOT have deprecated tags in interaction event
       expect(event.tags.find(([name]) => name === 'is_sleeping')).toBeUndefined();
       expect(event.tags.find(([name]) => name === 'sleep_started_at')).toBeUndefined();
@@ -153,16 +158,16 @@ describe('Sleep Interaction Flow', () => {
         blobbiId: 'blobbi-test',
         action: 'wake',
         actionCategory: 'recovery',
-        statChanges: [],
+        statChanges: [{ stat: 'energy', delta: 10 }], // Wake requires energy stat change
         experienceGained: 2,
         carePoints: 1,
       };
 
       const event = buildInteractionV2Event(wakeParams, 'test-pubkey');
-      
+
       // Verify wake action
       expect(event.tags.find(([name]) => name === 'action')?.[1]).toBe('wake');
-      
+
       // Should NOT have deprecated tags in interaction event
       expect(event.tags.find(([name]) => name === 'is_sleeping')).toBeUndefined();
       expect(event.tags.find(([name]) => name === 'sleep_started_at')).toBeUndefined();
@@ -205,7 +210,7 @@ describe('Sleep Interaction Flow', () => {
 
       expect(validation.valid).toBe(true);
       expect(validation.errors).toHaveLength(0);
-      
+
       // Should have stat_change tags
       const statChangeTags = event.tags.filter(([name]) => name === 'stat_change');
       expect(statChangeTags.length).toBeGreaterThan(0);
@@ -224,7 +229,7 @@ describe('Sleep Interaction Flow', () => {
       };
 
       const event = buildInteractionV2Event(sleepParams, 'test-pubkey');
-      
+
       // Zero values should be omitted from tags (per build logic)
       expect(event.tags.find(([name]) => name === 'experience_gained')).toBeUndefined();
       expect(event.tags.find(([name]) => name === 'care_points')).toBeUndefined();
@@ -235,13 +240,13 @@ describe('Sleep Interaction Flow', () => {
         blobbiId: 'blobbi-test',
         action: 'wake',
         actionCategory: 'recovery',
-        statChanges: [],
+        statChanges: [{ stat: 'energy', delta: 10 }], // Wake requires energy stat change
         experienceGained: 2,
         carePoints: 1,
       };
 
       const event = buildInteractionV2Event(wakeParams, 'test-pubkey');
-      
+
       // Non-zero values should be included
       expect(event.tags.find(([name]) => name === 'experience_gained')?.[1]).toBe('2');
       expect(event.tags.find(([name]) => name === 'care_points')?.[1]).toBe('1');
@@ -271,7 +276,7 @@ describe('Sleep Interaction Flow', () => {
       // Both should be valid
       expect(validateInteractionV2Event(sleep1).valid).toBe(true);
       expect(validateInteractionV2Event(wake2).valid).toBe(true);
-      
+
       // Should have different blobbi IDs
       expect(sleep1.tags.find(([name]) => name === 'blobbi_id')?.[1]).toBe('blobbi-1');
       expect(wake2.tags.find(([name]) => name === 'blobbi_id')?.[1]).toBe('blobbi-2');

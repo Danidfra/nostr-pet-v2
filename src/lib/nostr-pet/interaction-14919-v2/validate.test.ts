@@ -262,12 +262,28 @@ describe('validateInteractionV2Event', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('should allow zero stat changes for wake action (state-only action)', () => {
+  it('should require stat changes for wake action (energy recovery)', () => {
+    const wakeParamsNoStats: CreateInteractionV2Params = {
+      blobbiId: 'test-blobbi-123',
+      action: 'wake',
+      actionCategory: 'recovery',
+      statChanges: [], // Wake REQUIRES energy stat change
+      experienceGained: 2,
+      carePoints: 1,
+    };
+
+    // Wake requires stat changes (energy recovery)
+    expect(() => buildInteractionV2Event(wakeParamsNoStats, 'test-pubkey')).toThrow(
+      'Missing required tag: at least one ["stat_change", "<stat>:<delta>"]'
+    );
+  });
+
+  it('should allow wake action with energy stat change', () => {
     const wakeParams: CreateInteractionV2Params = {
       blobbiId: 'test-blobbi-123',
       action: 'wake',
       actionCategory: 'recovery',
-      statChanges: [], // Wake may have stat changes based on energy, but can be empty
+      statChanges: [{ stat: 'energy', delta: 20 }], // Energy recovery from sleep
       experienceGained: 2,
       carePoints: 1,
     };

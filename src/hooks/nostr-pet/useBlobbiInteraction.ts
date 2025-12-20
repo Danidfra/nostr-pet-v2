@@ -16,6 +16,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@nostrify/react';
 import { useBlobbi } from './useBlobbiStatus';
 import { useBlobbonautProfile } from './useBlobbonautProfile';
+import type { NostrEvent } from '@nostrify/nostrify';
 import type { BlobbiStatus } from '@/lib/nostr-pet/status-31124/types';
 import type { BlobbonautProfile } from '@/lib/nostr-pet/profile-31125/types';
 import type { StorageItem } from '@/lib/nostr-pet/core/types';
@@ -173,13 +174,43 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     console.log('[useBlobbiInteraction.interact] All validations passed');
 
     try {
+      // SPECIAL HANDLING: Wake action - query sleep events for energy recovery
+      let sleepEvents: NostrEvent[] | undefined;
+      if (action === 'wake') {
+        console.log('[useBlobbiInteraction.interact] Wake action - querying sleep events');
+        try {
+          const signal = AbortSignal.timeout(2000);
+          sleepEvents = await nostr.query(
+            [{
+              kinds: [14919],
+              '#blobbi_id': [blobbiId],
+              '#action': ['sleep'],
+              limit: 10, // Get recent sleep events
+            }],
+            { signal }
+          );
+          console.log('[useBlobbiInteraction.interact] Found', sleepEvents.length, 'sleep events');
+        } catch (error) {
+          console.error('[useBlobbiInteraction.interact] Failed to query sleep events', error);
+          sleepEvents = [];
+        }
+      }
+
       // 1. Compute PURE DELTAS for optimistic update
-      const deltas = applyBlobbiInteraction(
+      let deltas = applyBlobbiInteraction(
         blobbi,
         blobbi.stage,
         action,
         itemId
       );
+
+      // Add energy recovery for wake action
+      if (action === 'wake' && sleepEvents) {
+        const { calculateEnergyFromLatestSleep } = await import('@/lib/nostr-pet/sleep');
+        const energyGain = calculateEnergyFromLatestSleep(sleepEvents, blobbiId);
+        deltas = { ...deltas, energy: energyGain };
+        console.log('[useBlobbiInteraction.interact] Wake energy recovery', { energyGain });
+      }
 
       // Get rewards
       const rewards = getInteractionRewards(action);
@@ -277,6 +308,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
           itemId,
           itemQuantity,
           profile: profile || undefined,
+          sleepEvents, // Pass sleep events for wake energy calculation
         },
         user.pubkey
       );

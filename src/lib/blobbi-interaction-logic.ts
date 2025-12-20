@@ -148,15 +148,10 @@ export const applyBlobbiInteraction = (
     }
   }
 
-  // 4. Special wake logic (energy-dependent)
-  if (action === 'wake') {
-    const currentEnergy = currentStats.energy || 0;
-    if (currentEnergy >= 50) {
-      deltas.happiness = 5;
-    } else {
-      deltas.happiness = -5;
-    }
-  }
+  // 4. Wake action: energy recovery is handled separately in interaction flow
+  // based on sleep duration, not in this function
+  // This function returns empty deltas for wake - energy will be calculated
+  // by finding the latest sleep event and computing recovery time
 
   // Return pure deltas
   return deltas;

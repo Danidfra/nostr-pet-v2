@@ -37,6 +37,8 @@ export interface InteractionFlowParams {
   itemId?: string;
   itemQuantity?: number;
   profile?: BlobbonautProfile;
+  // For wake action: provide sleep events to calculate energy recovery
+  sleepEvents?: NostrEvent[];
 }
 
 /**
@@ -70,6 +72,7 @@ function getTagsToUpdateForAction(
   tagsToRemove.push('experience'); // Always updated with rewards
   tagsToRemove.push('care_streak'); // Always updated with care points
   tagsToRemove.push('last_interaction'); // Always updated to current time
+  tagsToRemove.push('last_decay_at'); // Always updated to reset decay timer
 
   // 3. Add action-specific timestamp/state tags
   switch (action) {
@@ -218,12 +221,27 @@ export async function executeInteractionFlow(
     // ============================================================
 
     // Get PURE DELTAS from interaction logic
-    const deltas = applyBlobbiInteraction(
+    let deltas = applyBlobbiInteraction(
       blobbi,
       blobbi.stage,
       action,
       itemId
     );
+
+    // SPECIAL HANDLING: Wake action - calculate energy recovery from sleep duration
+    if (action === 'wake' && params.sleepEvents) {
+      const { calculateEnergyFromLatestSleep } = await import('./sleep');
+      const energyGain = calculateEnergyFromLatestSleep(
+        params.sleepEvents,
+        blobbi.id
+      );
+      // Add energy recovery to deltas
+      deltas = { ...deltas, energy: energyGain };
+      console.log('[executeInteractionFlow] Wake energy recovery', {
+        energyGain,
+        blobbiId: blobbi.id,
+      });
+    }
 
     // Multiply deltas by item quantity, keeping ONLY non-zero deltas
     const multipliedDeltas: Record<string, number> = {};
@@ -331,6 +349,9 @@ export async function executeInteractionFlow(
     newStats.careStreak = (blobbi.careStreak || 0) + carePoints;
     newStats.lastInteraction = Math.floor(Date.now() / 1000);
 
+    // Update decay tracking - interactions reset decay timer
+    newStats.lastDecayAt = Math.floor(Date.now() / 1000);
+
     // Handle action-specific timestamps
     const now = Math.floor(Date.now() / 1000);
     if (action === 'feed') newStats.lastMeal = now;
@@ -381,6 +402,7 @@ export async function executeInteractionFlow(
     tagsToAdd.push(['experience', newStats.experience!.toString()]);
     tagsToAdd.push(['care_streak', newStats.careStreak!.toString()]);
     tagsToAdd.push(['last_interaction', newStats.lastInteraction!.toString()]);
+    tagsToAdd.push(['last_decay_at', newStats.lastDecayAt!.toString()]); // Reset decay timer
     if (newStats.lastMeal !== undefined) tagsToAdd.push(['last_meal', newStats.lastMeal.toString()]);
     if (newStats.lastClean !== undefined) tagsToAdd.push(['last_clean', newStats.lastClean.toString()]);
     if (newStats.lastMedicine !== undefined) tagsToAdd.push(['last_medicine', newStats.lastMedicine.toString()]);

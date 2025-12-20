@@ -66,6 +66,9 @@ export interface Blobbi {
   lastSing?: number;
   lastMedicine?: number;
 
+  // Decay tracking
+  lastDecayAt?: number; // Single source of truth for decay calculations
+
   // DEPRECATED: These fields are no longer used in v2+
   // They are kept in the type for backward compatibility with old events
   // New events should ONLY use 'state' field for sleep tracking

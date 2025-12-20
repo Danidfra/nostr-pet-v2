@@ -114,6 +114,9 @@ export interface BlobbiStatus {
   lastTalk?: number;
   lastMedicine?: number;
 
+  // Decay tracking
+  lastDecayAt?: number; // Single source of truth for decay calculations
+
   // Social
   adoptedBy?: string;
   adoptedFrom?: string;
@@ -203,6 +206,9 @@ export const BLOBBI_STATUS_TAG_NAMES = {
   LAST_SING: 'last_sing',
   LAST_TALK: 'last_talk',
   LAST_MEDICINE: 'last_medicine',
+
+  // Decay tracking
+  LAST_DECAY_AT: 'last_decay_at',
 
   // Social
   ADOPTED_BY: 'adopted_by',

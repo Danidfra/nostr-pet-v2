@@ -297,6 +297,9 @@ export const parseBlobbiStatusFromEvent = (event: NostrEvent): BlobbiStatus | nu
     const startEvolution = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.START_EVOLUTION);
     const hatchTime = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.HATCH_TIME);
 
+    // Parse decay tracking
+    const lastDecayAt = parseNumericTag(event.tags as NostrTag[], BLOBBI_STATUS_TAG_NAMES.LAST_DECAY_AT);
+
     // Collect additional tags (unknown tags for future compatibility)
     const knownTagNames = Object.values(BLOBBI_STATUS_TAG_NAMES);
     const additionalTags = normalizeTagMap(event.tags as NostrTag[], knownTagNames);
@@ -356,6 +359,7 @@ export const parseBlobbiStatusFromEvent = (event: NostrEvent): BlobbiStatus | nu
       lastSing,
       lastTalk,
       lastMedicine,
+      lastDecayAt,
       adoptedBy,
       adoptedFrom,
       currentLocation,

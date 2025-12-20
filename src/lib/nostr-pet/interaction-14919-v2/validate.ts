@@ -102,12 +102,12 @@ export function validateInteractionV2Event(
   }
 
   // Stat change tags: at least one ["stat_change", "<stat>:<delta>"]
-  // EXCEPTION: State-only actions (sleep, wake) don't require stat changes
-  const stateOnlyActions = ['sleep', 'wake'];
-  const isStateOnlyAction = actionTag && stateOnlyActions.includes(actionTag[1]);
+  // EXCEPTION: Sleep is a pure state-only action (no stat changes)
+  // Wake must include energy recovery stat change
+  const isSleepAction = actionTag && actionTag[1] === 'sleep';
 
   const statChangeTags = findTags(INTERACTION_V2_TAG_NAMES.STAT_CHANGE);
-  if (statChangeTags.length === 0 && !isStateOnlyAction) {
+  if (statChangeTags.length === 0 && !isSleepAction) {
     errors.push(`Missing required tag: at least one ["${INTERACTION_V2_TAG_NAMES.STAT_CHANGE}", "<stat>:<delta>"]`);
   } else {
     // Validate stat_change format (if any are present)

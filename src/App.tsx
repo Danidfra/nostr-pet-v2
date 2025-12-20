@@ -17,6 +17,7 @@ import { Blobbi } from '@/types/blobbi';
 import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
 import { useCurrentUserBlobbonautProfile } from '@/hooks/nostr-pet/useBlobbonautProfile';
 import { useBlobbisLoaded } from '@/hooks/nostr-pet/useBlobbiStatus';
+import { useDecaySystem } from '@/hooks/nostr-pet/useDecaySystem';
 
 const head = createHead();
 const queryClient = new QueryClient({
@@ -42,6 +43,12 @@ function BlobbiAppInner() {
   const { isLoggedIn, isInitialized, logout: authLogout } = useNostrAuth();
   const { hasProfile, profile, isInitialLoading: isProfileLoading } = useCurrentUserBlobbonautProfile();
   const { blobbis: realBlobbis, isLoaded: areBlobbisLoaded, hasBlobbis } = useBlobbisLoaded();
+
+  // Initialize decay system (applies decay on load and every 60s)
+  useDecaySystem({
+    intervalMs: 60000, // Check every 60 seconds
+    enabled: isLoggedIn && areBlobbisLoaded, // Only run when logged in with Blobbis
+  });
 
   const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
 
