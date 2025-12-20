@@ -269,11 +269,13 @@ describe('executeInteractionFlow - Tag Preservation (Option A)', () => {
     // Energy should be updated (sleep increases energy)
     expect(getTag('energy')).toBe('40'); // ✅ Updated (30 + 10)
 
-    // Sleep state should be updated
-    expect(getTag('is_sleeping')).toBe('true'); // ✅ Updated
+    // Sleep state should be updated (simplified model - only 'state' tag)
     expect(getTag('state')).toBe('sleeping'); // ✅ Updated
-    expect(getTag('sleep_started_at')).toBeDefined(); // ✅ Added
-    expect(getTag('last_sleep_update')).toBeDefined(); // ✅ Added
+
+    // Deprecated tags should NOT be present in new events
+    expect(getTag('is_sleeping')).toBeUndefined(); // ❌ Deprecated
+    expect(getTag('sleep_started_at')).toBeUndefined(); // ❌ Deprecated
+    expect(getTag('last_sleep_update')).toBeUndefined(); // ❌ Deprecated
 
     // Universal tags should be updated
     expect(getTag('experience')).toBeDefined(); // ✅ Updated
