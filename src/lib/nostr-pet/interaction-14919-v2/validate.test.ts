@@ -262,18 +262,36 @@ describe('validateInteractionV2Event', () => {
     expect(result.errors).toHaveLength(0);
   });
 
-  it('should require stat changes for wake action (energy recovery)', () => {
+  it('should allow zero stat changes for wake action (0 recovery)', () => {
     const wakeParamsNoStats: CreateInteractionV2Params = {
       blobbiId: 'test-blobbi-123',
       action: 'wake',
       actionCategory: 'recovery',
-      statChanges: [], // Wake REQUIRES energy stat change
+      statChanges: [], // Wake with 0 recovery is valid (no stat changes)
       experienceGained: 2,
       carePoints: 1,
     };
 
-    // Wake requires stat changes (energy recovery)
-    expect(() => buildInteractionV2Event(wakeParamsNoStats, 'test-pubkey')).toThrow(
+    // Wake with 0 recovery is valid
+    const event = buildInteractionV2Event(wakeParamsNoStats, 'test-pubkey');
+    const result = validateInteractionV2Event(event);
+
+    expect(result.valid).toBe(true);
+    expect(result.errors).toHaveLength(0);
+  });
+
+  it('should require stat changes for non-sleep/wake actions', () => {
+    const feedParamsNoStats: CreateInteractionV2Params = {
+      blobbiId: 'test-blobbi-123',
+      action: 'feed',
+      actionCategory: 'care',
+      statChanges: [], // Feed requires stat changes
+      experienceGained: 5,
+      carePoints: 1,
+    };
+
+    // Non-sleep/wake actions require stat changes
+    expect(() => buildInteractionV2Event(feedParamsNoStats, 'test-pubkey')).toThrow(
       'Missing required tag: at least one ["stat_change", "<stat>:<delta>"]'
     );
   });

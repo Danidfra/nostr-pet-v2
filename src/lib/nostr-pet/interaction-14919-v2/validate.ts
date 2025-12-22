@@ -102,36 +102,35 @@ export function validateInteractionV2Event(
   }
 
   // Stat change tags: at least one ["stat_change", "<stat>:<delta>"]
-  // EXCEPTION: Sleep is a pure state-only action (no stat changes required)
-  // Wake must include stat_change only when energy recovery > 0 (omit if 0)
-  const isSleepAction = actionTag && actionTag[1] === 'sleep';
+  // EXCEPTIONS:
+  // - Sleep: stat_change tags are optional (pure state-only action)
+  // - Wake: stat_change tags are optional (when energy recovery is 0)
+  // - All other actions: must have >= 1 stat_change
+  const action = actionTag?.[1];
+  const isSleepAction = action === 'sleep';
+  const isWakeAction = action === 'wake';
 
   const statChangeTags = findTags(INTERACTION_V2_TAG_NAMES.STAT_CHANGE);
-  if (statChangeTags.length === 0 && !isSleepAction) {
+
+  // Require stat_change for all actions except sleep and wake
+  if (statChangeTags.length === 0 && !isSleepAction && !isWakeAction) {
     errors.push(`Missing required tag: at least one ["${INTERACTION_V2_TAG_NAMES.STAT_CHANGE}", "<stat>:<delta>"]`);
-  } else {
-    // Validate stat_change format (if any are present)
-    for (const [, value] of statChangeTags) {
-      if (!value || !value.includes(':')) {
-        errors.push(`Invalid stat_change format: expected "<stat>:<delta>", got "${value}"`);
-      } else {
-        const [stat, deltaStr] = value.split(':');
-        if (!stat || stat.trim() === '') {
-          errors.push(`Invalid stat_change: stat name is empty in "${value}"`);
-        }
-        const delta = parseInt(deltaStr, 10);
-        if (isNaN(delta)) {
-          errors.push(`Invalid stat_change: delta is not a number in "${value}"`);
-        }
-      }
-    }
   }
 
-  // Wake action validation: if wake has stat_change, ensure it's valid
-  const isWakeAction = actionTag && actionTag[1] === 'wake';
-  if (isWakeAction && statChangeTags.length === 0) {
-    // Wake with 0 recovery is valid (no stat_change tag)
-    console.log('[14919 v2 Validation] Wake action with no stat changes (0 recovery)');
+  // Validate stat_change format (if any are present)
+  for (const [, value] of statChangeTags) {
+    if (!value || !value.includes(':')) {
+      errors.push(`Invalid stat_change format: expected "<stat>:<delta>", got "${value}"`);
+    } else {
+      const [stat, deltaStr] = value.split(':');
+      if (!stat || stat.trim() === '') {
+        errors.push(`Invalid stat_change: stat name is empty in "${value}"`);
+      }
+      const delta = parseInt(deltaStr, 10);
+      if (isNaN(delta)) {
+        errors.push(`Invalid stat_change: delta is not a number in "${value}"`);
+      }
+    }
   }
 
   // Client tag: ["client", "blobbi"]

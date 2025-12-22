@@ -62,7 +62,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
     const blobbis = queryClient.getQueryData<BlobbiStatus[]>(statusQueryKey);
 
     if (!blobbis || blobbis.length === 0) {
-      console.log('[DecaySystem] No Blobbis found in cache');
+      console.log('[DecaySystem] No Blobbis found in cache - cache may not be populated yet');
       return;
     }
 
@@ -113,7 +113,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
 
     console.log('[DecaySystem] Initializing - applying decay on load');
     applyDecayToAll();
-  }, [enabled, user?.pubkey, nostr, applyDecayToAll]); // Only run when these change
+  }, [enabled, user, nostr, applyDecayToAll]); // Only run when these change
 
   // Set up periodic decay checks
   useEffect(() => {
@@ -142,7 +142,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
         intervalRef.current = null;
       }
     };
-  }, [enabled, user?.pubkey, nostr, intervalMs, applyDecayToAll]);
+  }, [enabled, user, nostr, intervalMs, applyDecayToAll]);
 
   return {
     // Manual trigger for decay (useful for testing or force-refresh)

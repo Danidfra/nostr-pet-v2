@@ -39,7 +39,7 @@ const defaultConfig: AppConfig = {
 function BlobbiAppInner() {
   const { isLoggedIn, isInitialized, logout: authLogout } = useNostrAuth();
   const { hasProfile, profile, isInitialLoading: isProfileLoading } = useCurrentUserBlobbonautProfile();
-  const { blobbis: realBlobbis, isLoaded: areBlobbisLoaded, hasBlobbis } = useBlobbisLoaded();
+  const { isLoaded: areBlobbisLoaded, hasBlobbis, count: blobbisCount } = useBlobbisLoaded();
 
   // Initialize decay system (applies decay on load and every 60s)
   // Only enable when user is logged in AND blobbis are loaded AND at least one blobbi exists
@@ -56,7 +56,7 @@ function BlobbiAppInner() {
     isProfileLoading,
     areBlobbisLoaded,
     hasBlobbis,
-    realBlobbisCount: realBlobbis.length,
+    blobbisCount,
   });
 
   const handleAdoption = (_blobbiName: string) => {
