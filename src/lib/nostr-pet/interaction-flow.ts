@@ -431,10 +431,11 @@ export async function executeInteractionFlow(
       normalizedTagCount: statusTags.length,
     });
 
+    // CRITICAL: Preserve original createdAt - this represents the Blobbi's birth time
     const statusEventUnsigned: Omit<NostrEvent, 'id' | 'sig'> = {
       kind: blobbi.event.kind,
       pubkey: ownerPubkey,
-      created_at: Math.floor(Date.now() / 1000),
+      created_at: blobbi.createdAt, // CRITICAL: Use original creation time, not now
       tags: statusTags,
       content: blobbi.event.content,
     };
@@ -442,6 +443,8 @@ export async function executeInteractionFlow(
     console.log('[executeInteractionFlow] STEP 3: Publishing 31124', {
       kind: statusEventUnsigned.kind,
       tagsCount: statusEventUnsigned.tags.length,
+      originalCreatedAt: blobbi.createdAt,
+      preservingCreationTime: true,
     });
 
     // Sign and publish status event

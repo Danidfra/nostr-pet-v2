@@ -107,10 +107,11 @@ export async function applyDecayAndPublish(
     );
 
     // Build unsigned event
+    // CRITICAL: Preserve original createdAt - only last_decay_at advances
     const unsignedEvent = {
       kind: blobbi.event.kind,
       pubkey: blobbi.ownerPubkey,
-      created_at: now,
+      created_at: blobbi.createdAt, // CRITICAL: Use original creation time, not now
       tags: updatedTags,
       content: blobbi.event.content,
     };
@@ -119,6 +120,8 @@ export async function applyDecayAndPublish(
       kind: unsignedEvent.kind,
       tagsCount: unsignedEvent.tags.length,
       changedStats: changedStatKeys,
+      originalCreatedAt: blobbi.createdAt,
+      newLastDecayAt: decayResult.newLastDecayAt,
     });
 
     // Sign and publish
@@ -137,12 +140,13 @@ export async function applyDecayAndPublish(
     console.log('[DecayManager] Decay update published successfully');
 
     // Return updated blobbi
+    // CRITICAL: Preserve original createdAt
     const updatedBlobbi: BlobbiStatus = {
       ...blobbi,
       ...decayResult.updatedStats,
       lastDecayAt: decayResult.newLastDecayAt,
       event: result.event!,
-      createdAt: now,
+      createdAt: blobbi.createdAt, // CRITICAL: Keep original creation time
     };
 
     return {

@@ -10,7 +10,7 @@
  * - Rollback on failure
  */
 
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { useNostr } from '@nostrify/react';
@@ -58,6 +58,9 @@ export const useBlobbiInteraction = (blobbiId: string) => {
   const { blobbi, isLoading } = useBlobbi(blobbiId);
   const { profile } = useBlobbonautProfile();
 
+  // Action lock to prevent duplicate interactions
+  const actionInProgressRef = useRef(false);
+
   /**
    * Perform an interaction with optimistic updates and full v2 flow
    */
@@ -65,6 +68,21 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     params: InteractParams
   ): Promise<InteractResult> => {
     const { action, itemId, itemQuantity = 1 } = params;
+
+    // CRITICAL: Check action lock to prevent duplicate interactions
+    if (actionInProgressRef.current) {
+      console.warn('[useBlobbiInteraction.interact] BLOCKED: Action already in progress', {
+        blobbiId,
+        action,
+      });
+      return {
+        success: false,
+        error: 'Action already in progress. Please wait...',
+      };
+    }
+
+    // Set action lock
+    actionInProgressRef.current = true;
 
     console.log('[useBlobbiInteraction.interact] START', {
       userPubkey: user?.pubkey,
@@ -80,6 +98,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     // Validation: Must have user
     if (!user) {
       console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No user');
+      actionInProgressRef.current = false;
       return {
         success: false,
         error: 'Must be logged in to interact',
@@ -89,6 +108,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     // Validation: Must have nostr
     if (!nostr) {
       console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No nostr client');
+      actionInProgressRef.current = false;
       return {
         success: false,
         error: 'Nostr client not available',
@@ -98,6 +118,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
     // Validation: Must have blobbi
     if (!blobbi) {
       console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: No blobbi');
+      actionInProgressRef.current = false;
       return {
         success: false,
         error: 'Blobbi not found',
@@ -110,6 +131,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         action,
         stage: blobbi.stage,
       });
+      actionInProgressRef.current = false;
       return {
         success: false,
         error: `Action "${action}" is not valid for ${blobbi.stage} stage`,
@@ -122,6 +144,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
 
       if (!itemDef) {
         console.error('[useBlobbiInteraction.interact] VALIDATION FAILED: Item not found', { itemId });
+        actionInProgressRef.current = false;
         return {
           success: false,
           error: `Item "${itemId}" not found`,
@@ -135,6 +158,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
           itemStages: itemDef.stages,
           blobbiStage: blobbi.stage,
         });
+        actionInProgressRef.current = false;
         return {
           success: false,
           error: `Item "${itemDef.displayName}" cannot be used on ${blobbi.stage} stage`,
@@ -150,6 +174,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
             need: itemQuantity,
             have: storageItem?.quantity || 0,
           });
+          actionInProgressRef.current = false;
           return {
             success: false,
             error: `You don't have enough ${itemDef.displayName}. Need ${itemQuantity}, have ${storageItem?.quantity || 0}`,
@@ -165,6 +190,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         action,
         state: blobbi.state,
       });
+      actionInProgressRef.current = false;
       return {
         success: false,
         error: `${blobbi.name} is sleeping. Wake them up first!`,
@@ -351,6 +377,9 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         success: false,
         error: errorMessage,
       };
+    } finally {
+      // CRITICAL: Always release action lock
+      actionInProgressRef.current = false;
     }
   }, [user, nostr, blobbi, profile, blobbiId, queryClient]);
 

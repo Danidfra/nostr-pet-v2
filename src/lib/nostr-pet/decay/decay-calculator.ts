@@ -241,6 +241,34 @@ export function calculateDecay(
   // Calculate elapsed time
   const elapsedSeconds = now - lastDecayAt;
 
+  // DEFENSIVE LOGGING: Log time base for debugging
+  console.log('[DecayCalculator] Time base check', {
+    blobbiId: blobbi.id,
+    createdAt: blobbi.createdAt,
+    lastDecayAt: blobbi.lastDecayAt,
+    now,
+    elapsedSeconds,
+    elapsedHours: (elapsedSeconds / 3600).toFixed(2),
+  });
+
+  // DEFENSIVE CHECK: If elapsed time is suspiciously large (>7 days), skip decay and warn
+  const MAX_REASONABLE_ELAPSED = 7 * 24 * 3600; // 7 days in seconds
+  if (elapsedSeconds > MAX_REASONABLE_ELAPSED) {
+    console.warn('[DecayCalculator] Elapsed time suspiciously large - skipping decay to prevent stat collapse', {
+      blobbiId: blobbi.id,
+      elapsedSeconds,
+      elapsedDays: (elapsedSeconds / 86400).toFixed(2),
+      lastDecayAt,
+      createdAt: blobbi.createdAt,
+    });
+    return {
+      updatedStats: {},
+      hasChanges: false,
+      newLastDecayAt: lastDecayAt,
+      elapsedSeconds,
+    };
+  }
+
   // If less than 60 seconds, skip decay
   if (elapsedSeconds < 60) {
     return {

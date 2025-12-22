@@ -39,6 +39,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
   const { nostr } = useNostr();
   const { user } = useCurrentUser();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initialDecayRunRef = useRef(false); // Guard initial decay run
 
   /**
    * Apply decay to all Blobbis
@@ -111,7 +112,14 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
       return;
     }
 
-    console.log('[DecaySystem] Initializing - applying decay on load');
+    // CRITICAL: Guard initial decay run to prevent double execution in React 18 StrictMode
+    if (initialDecayRunRef.current) {
+      console.log('[DecaySystem] Initial decay already ran - skipping duplicate');
+      return;
+    }
+
+    initialDecayRunRef.current = true;
+    console.log('[DecaySystem] Initializing - applying decay on load (first time only)');
     applyDecayToAll();
   }, [enabled, user, nostr, applyDecayToAll]); // Only run when these change
 
