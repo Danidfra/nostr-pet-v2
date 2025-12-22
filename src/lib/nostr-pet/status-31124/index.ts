@@ -64,3 +64,13 @@ export {
   mapBlobbiStatusToBlobbi,
   mapBlobbiStatusListToBlobbis,
 } from './mappers';
+
+// Optimistic Updates
+export {
+  applyInteractionToStatus,
+  reconcilePublishedStatus,
+} from './optimistic-updates';
+export type {
+  InteractionPayload,
+  ApplyInteractionResult,
+} from './optimistic-updates';

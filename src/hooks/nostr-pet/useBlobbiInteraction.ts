@@ -21,12 +21,10 @@ import type { BlobbiStatus } from '@/lib/nostr-pet/status-31124/types';
 import type { BlobbonautProfile } from '@/lib/nostr-pet/profile-31125/types';
 import type { StorageItem } from '@/lib/nostr-pet/core/types';
 import {
-  applyBlobbiInteraction,
   isActionValidForStage,
-  getInteractionRewards,
-  clampStat,
   type BlobbiAction,
 } from '@/lib/blobbi-interaction-logic';
+import { applyInteractionToStatus } from '@/lib/nostr-pet/status-31124/optimistic-updates';
 import { executeInteractionFlow } from '@/lib/nostr-pet/interaction-flow';
 import { getItemDefinition } from '@/lib/blobbi-items';
 
@@ -222,80 +220,43 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         }
       }
 
-      // 1. Compute PURE DELTAS for optimistic update
-      let deltas = applyBlobbiInteraction(
-        blobbi,
-        blobbi.stage,
-        action,
-        itemId
-      );
-
-      // Add energy recovery for wake action
+      // 1. Calculate energy recovery for wake action (if needed)
+      let energyRecovery = 0;
       if (action === 'wake' && sleepEvents) {
         const { calculateEnergyFromLatestSleep } = await import('@/lib/nostr-pet/sleep');
-        const energyGain = calculateEnergyFromLatestSleep(sleepEvents, blobbiId);
-        deltas = { ...deltas, energy: energyGain };
-        console.log('[useBlobbiInteraction.interact] Wake energy recovery', { energyGain });
+        energyRecovery = calculateEnergyFromLatestSleep(sleepEvents, blobbiId);
+        console.log('[useBlobbiInteraction.interact] Wake energy recovery', { energyRecovery });
       }
 
-      // Get rewards
-      const rewards = getInteractionRewards(action);
-
-      // Multiply deltas by quantity
-      const multipliedDeltas: Record<string, number> = {};
-      Object.entries(deltas).forEach(([key, delta]) => {
-        multipliedDeltas[key] = delta * itemQuantity;
+      // 2. Apply interaction to status (PURE FUNCTION - optimistic update)
+      const interactionResult = applyInteractionToStatus(blobbi, {
+        action,
+        itemId,
+        itemQuantity,
+        energyRecovery,
       });
 
-      // Apply deltas with clamping to get new stat values
-      const newStats: Partial<BlobbiStatus> = {};
-      Object.entries(multipliedDeltas).forEach(([key, delta]) => {
-        const currentValue = (blobbi as unknown as Record<string, unknown>)[key];
-        const currentNum = typeof currentValue === 'number' ? currentValue : 0;
-        const newValue = clampStat(currentNum + delta);
-        (newStats as unknown as Record<string, number>)[key] = newValue;
+      const { nextStatus, statChanges } = interactionResult;
+
+      console.log('[useBlobbiInteraction.interact] Computed next status', {
+        statChanges,
+        experienceGained: interactionResult.experienceGained,
+        carePointsGained: interactionResult.carePointsGained,
       });
 
-      // Add rewards
-      newStats.experience = blobbi.experience + rewards.experience;
-      newStats.careStreak = blobbi.careStreak + rewards.carePoints;
-      newStats.lastInteraction = Math.floor(Date.now() / 1000);
-
-      // Add action-specific timestamps
-      const now = Math.floor(Date.now() / 1000);
-      if (action === 'feed') newStats.lastMeal = now;
-      if (action === 'clean') newStats.lastClean = now;
-      if (action === 'medicine') newStats.lastMedicine = now;
-      if (action === 'warm') newStats.lastWarm = now;
-      if (action === 'sing') newStats.lastSing = now;
-
-      // Handle sleep state changes (simplified model - only use 'state' tag)
-      if (action === 'sleep') {
-        newStats.state = 'sleeping';
-        // Explicitly set deprecated fields to undefined
-        newStats.isSleeping = undefined;
-        newStats.sleepStartedAt = undefined;
-        newStats.lastSleepUpdate = undefined;
-      } else if (action === 'wake') {
-        newStats.state = 'active';
-        // Explicitly set deprecated fields to undefined
-        newStats.isSleeping = undefined;
-        newStats.sleepStartedAt = undefined;
-        newStats.lastSleepUpdate = undefined;
-      }
-
-      // 2. Optimistically update Blobbi status in cache
+      // 3. Optimistically update Blobbi status in cache
       const statusQueryKey = ['blobbi-status-list', user.pubkey];
       const previousStatusList = queryClient.getQueryData<BlobbiStatus[]>(statusQueryKey);
 
       if (previousStatusList) {
         const updatedList = previousStatusList.map(b =>
-          b.id === blobbiId ? { ...b, ...newStats } : b
+          b.id === blobbiId ? nextStatus : b
         );
         queryClient.setQueryData(statusQueryKey, updatedList);
+        console.log('[useBlobbiInteraction.interact] Optimistically updated cache');
       }
 
-      // 3. Optimistically decrement inventory (if item used)
+      // 4. Optimistically decrement inventory (if item used)
       let previousProfile: BlobbonautProfile | undefined;
       if (itemId && profile) {
         const profileQueryKey = ['blobbonaut-profile', null, user.pubkey];
@@ -323,7 +284,7 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         }
       }
 
-      // 4. Execute full v2 interaction flow (31125 → 14919 → 31124)
+      // 5. Execute full v2 interaction flow (31125 → 14919 → 31124)
       console.log('[useBlobbiInteraction.interact] Starting executeInteractionFlow...');
       const flowResult = await executeInteractionFlow(
         nostr,
@@ -364,11 +325,12 @@ export const useBlobbiInteraction = (blobbiId: string) => {
         };
       }
 
-      // Success!
+      // Success! Optimistic update already applied, no need to update cache again
+      // The published event will be picked up by the subscription and reconciled
       console.log('[useBlobbiInteraction.interact] SUCCESS - interaction complete');
       return {
         success: true,
-        newStats: flowResult.newStats || newStats,
+        newStats: nextStatus,
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
