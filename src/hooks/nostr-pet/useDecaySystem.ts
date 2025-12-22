@@ -8,7 +8,7 @@
  * Uses last_decay_at as single source of truth.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useNostr } from '@nostrify/react';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -43,8 +43,15 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
   /**
    * Apply decay to all Blobbis
    */
-  const applyDecayToAll = async () => {
-    if (!user || !nostr || !enabled) {
+  const applyDecayToAll = useCallback(async () => {
+    // Safety checks: ensure user, signer, and nostr are all available
+    if (!user || !user.signer || !nostr || !enabled) {
+      console.log('[DecaySystem] Skipping decay - not ready', {
+        hasUser: !!user,
+        hasSigner: !!user?.signer,
+        hasNostr: !!nostr,
+        enabled,
+      });
       return;
     }
 
@@ -55,7 +62,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
     const blobbis = queryClient.getQueryData<BlobbiStatus[]>(statusQueryKey);
 
     if (!blobbis || blobbis.length === 0) {
-      console.log('[DecaySystem] No Blobbis found');
+      console.log('[DecaySystem] No Blobbis found in cache');
       return;
     }
 
@@ -75,7 +82,8 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
 
         if (result.success) {
           updatedBlobbis.push(result.blobbi);
-          if (result.blobbi !== blobbi) {
+          // Only set anyChanges if decay was applied (published)
+          if (result.applied) {
             anyChanges = true;
           }
         } else {
@@ -88,26 +96,28 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
       }
     }
 
-    // Update cache if any changes
+    // Update cache only if any decay was actually applied and published
     if (anyChanges) {
       console.log('[DecaySystem] Updating cache with decayed stats');
       queryClient.setQueryData(statusQueryKey, updatedBlobbis);
+    } else {
+      console.log('[DecaySystem] No decay changes to publish');
     }
-  };
+  }, [user, nostr, enabled, queryClient]);
 
   // Apply decay on mount (app load)
   useEffect(() => {
-    if (!enabled || !user || !nostr) {
+    if (!enabled || !user || !user.signer || !nostr) {
       return;
     }
 
     console.log('[DecaySystem] Initializing - applying decay on load');
     applyDecayToAll();
-  }, [enabled, user?.pubkey, nostr]); // Only run when these change
+  }, [enabled, user?.pubkey, nostr, applyDecayToAll]); // Only run when these change
 
   // Set up periodic decay checks
   useEffect(() => {
-    if (!enabled || !user || !nostr) {
+    if (!enabled || !user || !user.signer || !nostr) {
       return;
     }
 
@@ -132,7 +142,7 @@ export function useDecaySystem(config: UseDecaySystemConfig = {}) {
         intervalRef.current = null;
       }
     };
-  }, [enabled, user?.pubkey, nostr, intervalMs]);
+  }, [enabled, user?.pubkey, nostr, intervalMs, applyDecayToAll]);
 
   return {
     // Manual trigger for decay (useful for testing or force-refresh)

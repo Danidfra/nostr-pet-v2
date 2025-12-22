@@ -102,8 +102,8 @@ export function validateInteractionV2Event(
   }
 
   // Stat change tags: at least one ["stat_change", "<stat>:<delta>"]
-  // EXCEPTION: Sleep is a pure state-only action (no stat changes)
-  // Wake must include energy recovery stat change
+  // EXCEPTION: Sleep is a pure state-only action (no stat changes required)
+  // Wake must include stat_change only when energy recovery > 0 (omit if 0)
   const isSleepAction = actionTag && actionTag[1] === 'sleep';
 
   const statChangeTags = findTags(INTERACTION_V2_TAG_NAMES.STAT_CHANGE);
@@ -125,6 +125,13 @@ export function validateInteractionV2Event(
         }
       }
     }
+  }
+
+  // Wake action validation: if wake has stat_change, ensure it's valid
+  const isWakeAction = actionTag && actionTag[1] === 'wake';
+  if (isWakeAction && statChangeTags.length === 0) {
+    // Wake with 0 recovery is valid (no stat_change tag)
+    console.log('[14919 v2 Validation] Wake action with no stat changes (0 recovery)');
   }
 
   // Client tag: ["client", "blobbi"]

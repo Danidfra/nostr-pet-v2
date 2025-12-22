@@ -236,7 +236,7 @@ export function calculateDecay(
   now: number = Math.floor(Date.now() / 1000)
 ): DecayResult {
   // Get last decay timestamp
-  const lastDecayAt = blobbi.lastDecayAt || blobbi.createdAt;
+  const lastDecayAt = blobbi.lastDecayAt ?? blobbi.createdAt;
 
   // Calculate elapsed time
   const elapsedSeconds = now - lastDecayAt;
@@ -259,16 +259,16 @@ export function calculateDecay(
   let hasChanges = false;
 
   // Get current state
-  const state: BlobbiState = blobbi.state || 'active';
+  const state: BlobbiState = blobbi.state ?? 'active';
   const stage: BlobbiLifeStage = blobbi.stage;
 
   // Apply decay based on life stage
   if (stage === 'egg') {
     // Egg stage decay
-    const currentTemp = blobbi.eggTemperature || 50;
-    const currentHygiene = blobbi.hygiene || 80;
-    const currentHappiness = blobbi.happiness || 80;
-    const currentShell = blobbi.shellIntegrity || 100;
+    const currentTemp = blobbi.eggTemperature ?? 50;
+    const currentHygiene = blobbi.hygiene ?? 80;
+    const currentHappiness = blobbi.happiness ?? 80;
+    const currentShell = blobbi.shellIntegrity ?? 100;
 
     // Apply basic decay
     const newTemp = currentTemp - DECAY_RATES.egg.eggTemperature * elapsedHours;
@@ -316,11 +316,11 @@ export function calculateDecay(
     // Baby/Adult stage decay
     const rates = stage === 'baby' ? DECAY_RATES.baby : DECAY_RATES.adult;
 
-    const currentHunger = blobbi.hunger || 80;
-    const currentHappiness = blobbi.happiness || 80;
-    const currentEnergy = blobbi.energy || 80;
-    const currentHygiene = blobbi.hygiene || 80;
-    const currentHealth = blobbi.health || 100;
+    const currentHunger = blobbi.hunger ?? 80;
+    const currentHappiness = blobbi.happiness ?? 80;
+    const currentEnergy = blobbi.energy ?? 80;
+    const currentHygiene = blobbi.hygiene ?? 80;
+    const currentHealth = blobbi.health ?? 100;
 
     // Apply basic decay
     const newHunger = currentHunger - rates.hunger * elapsedHours;

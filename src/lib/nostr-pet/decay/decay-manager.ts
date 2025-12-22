@@ -14,6 +14,16 @@ import { updateAndNormalizeTags } from '../core/tag-normalization';
 import { publishSignedEvent } from '@/lib/nostr/publisher';
 
 /**
+ * Result of applying decay and publishing
+ */
+export interface ApplyDecayResult {
+  success: boolean;
+  blobbi: BlobbiStatus;
+  applied: boolean; // True only when decay produced stat changes and a 31124 publish occurred
+  error?: string;
+}
+
+/**
  * Apply decay to a Blobbi and publish updated 31124 if needed
  *
  * @param nostr - Nostr client
@@ -27,16 +37,16 @@ export async function applyDecayAndPublish(
   signer: NostrSigner | undefined,
   blobbi: BlobbiStatus,
   now: number = Math.floor(Date.now() / 1000)
-): Promise<{ success: boolean; blobbi: BlobbiStatus; error?: string }> {
+): Promise<ApplyDecayResult> {
   console.log('[DecayManager] Checking decay for', blobbi.id);
 
   // Get last decay timestamp
-  const lastDecayAt = blobbi.lastDecayAt || blobbi.createdAt;
+  const lastDecayAt = blobbi.lastDecayAt ?? blobbi.createdAt;
 
   // Check if we should apply decay
   if (!shouldApplyDecay(lastDecayAt, now)) {
     console.log('[DecayManager] Skipping decay - less than 60s elapsed');
-    return { success: true, blobbi };
+    return { success: true, blobbi, applied: false };
   }
 
   // Calculate decay
@@ -48,16 +58,13 @@ export async function applyDecayAndPublish(
     updatedStats: Object.keys(decayResult.updatedStats),
   });
 
-  // If no changes, don't publish
+  // If no changes, don't publish (Option A: last_decay_at only advances on publish)
   if (!decayResult.hasChanges) {
-    console.log('[DecayManager] No stat changes - not publishing');
-    // Update lastDecayAt in memory only
+    console.log('[DecayManager] No stat changes - not publishing, keeping last_decay_at unchanged');
     return {
       success: true,
-      blobbi: {
-        ...blobbi,
-        lastDecayAt: decayResult.newLastDecayAt,
-      },
+      blobbi, // Return original blobbi without updating lastDecayAt
+      applied: false,
     };
   }
 
@@ -67,6 +74,7 @@ export async function applyDecayAndPublish(
     return {
       success: false,
       blobbi,
+      applied: false,
       error: 'No signer available',
     };
   }
@@ -121,6 +129,7 @@ export async function applyDecayAndPublish(
       return {
         success: false,
         blobbi,
+        applied: false,
         error: result.error,
       };
     }
@@ -139,12 +148,14 @@ export async function applyDecayAndPublish(
     return {
       success: true,
       blobbi: updatedBlobbi,
+      applied: true, // Decay was applied and published
     };
   } catch (error) {
     console.error('[DecayManager] Error publishing decay update', error);
     return {
       success: false,
       blobbi,
+      applied: false,
       error: error instanceof Error ? error.message : 'Unknown error',
     };
   }

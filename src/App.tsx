@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createHead, UnheadProvider } from '@unhead/react/client';
 import { NostrLoginProvider } from '@nostrify/react/login';
@@ -12,8 +11,6 @@ import { BlobbiAdoptionScreen } from '@/app/screens/BlobbiAdoptionScreen';
 import { HomeScreen } from '@/app/screens/HomeScreen';
 import { AuthLoadingScreen } from '@/components/AuthLoadingScreen';
 import { AppLoadingScreen } from '@/components/AppLoadingScreen';
-import { mockBlobbis } from '@/data/mockBlobbis';
-import { Blobbi } from '@/types/blobbi';
 import { useNostrAuth } from '@/hooks/nostr-pet/useNostrAuth';
 import { useCurrentUserBlobbonautProfile } from '@/hooks/nostr-pet/useBlobbonautProfile';
 import { useBlobbisLoaded } from '@/hooks/nostr-pet/useBlobbiStatus';
@@ -45,12 +42,11 @@ function BlobbiAppInner() {
   const { blobbis: realBlobbis, isLoaded: areBlobbisLoaded, hasBlobbis } = useBlobbisLoaded();
 
   // Initialize decay system (applies decay on load and every 60s)
+  // Only enable when user is logged in AND blobbis are loaded AND at least one blobbi exists
   useDecaySystem({
     intervalMs: 60000, // Check every 60 seconds
-    enabled: isLoggedIn && areBlobbisLoaded, // Only run when logged in with Blobbis
+    enabled: isLoggedIn && areBlobbisLoaded && hasBlobbis, // Only run when blobbis exist
   });
-
-  const [blobbis, setBlobbis] = useState<Blobbi[]>([]);
 
   // Log navigation state for debugging
   console.log('[App Navigation] State check:', {
@@ -61,26 +57,16 @@ function BlobbiAppInner() {
     areBlobbisLoaded,
     hasBlobbis,
     realBlobbisCount: realBlobbis.length,
-    mockBlobbisCount: blobbis.length,
   });
 
-  const handleAdoption = (blobbiName: string) => {
-    // Create a new egg blobbi with the given name
-    const newBlobbi: Blobbi = {
-      ...mockBlobbis[0], // Use the egg template
-      id: `blobbi-${Date.now()}`,
-      name: blobbiName,
-      birthTime: Date.now(),
-      lastInteraction: Date.now(),
-    };
-
-    // Add all mock blobbis for demo purposes
-    setBlobbis([newBlobbi, ...mockBlobbis.slice(1)]);
+  const handleAdoption = (_blobbiName: string) => {
+    // Adoption flow should trigger real Nostr adoption
+    // For now, just navigate - real blobbis will appear when adoption completes
+    console.log('[App] Adoption triggered - waiting for real Nostr blobbi creation');
   };
 
   const handleLogout = async () => {
     await authLogout();
-    setBlobbis([]);
   };
 
   // ============================================================
@@ -164,7 +150,6 @@ function BlobbiAppInner() {
   return (
     <>
       <HomeScreen
-        blobbis={blobbis}
         userName={profile?.name || 'Blobbonaut'}
         onLogout={handleLogout}
       />
